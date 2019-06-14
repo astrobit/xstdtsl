@@ -2,9 +2,9 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 AM_CPPFLAGS = -I./include
 
 lib_LTLIBRARIES = libxstdtsl.la
-libxquiz_la_SOURCES = src/xstdtsl_mutex.cpp
-libxquiz_la_CXXFLAGS = ${xml2_CFLAGS}
-libxquiz_la_LDFLAGS = -version-info 0:0:0
+libxstdtsl_la_SOURCES = src/xstdtsl_mutex.cpp
+libxstdtsl_la_CXXFLAGS = ${xml2_CFLAGS}
+libxstdtsl_la_LDFLAGS = -version-info 0:0:0
 
 include_HEADERS = include/xstdtsl_mutex
 

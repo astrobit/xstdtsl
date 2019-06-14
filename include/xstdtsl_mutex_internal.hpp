@@ -1,6 +1,8 @@
 #pragma once
 #include <atomic>
 #include <mutex>
+#include <thread>
+#include <chrono>
 
 namespace xstdtsl_internal
 {
@@ -189,7 +191,7 @@ namespace xstdtsl_internal
 		template <class Clock, class Duration> bool try_read_lock_until( const std::chrono::time_point<Clock,Duration>& i_cTimeout_Time ) const noexcept
 		{
 			bool bRet = try_read_lock();
-			while (!bRet && i_cTimeout_Time.clock::now() < i_cTimeout_Time)
+			while (!bRet && Clock::now() < i_cTimeout_Time)
 			{
 				std::this_thread::yield();
 				bRet = try_read_lock();
@@ -203,7 +205,7 @@ namespace xstdtsl_internal
 		template <class Clock, class Duration> bool try_write_lock_until( const std::chrono::time_point<Clock, Duration>& i_cTimeout_Time ) const noexcept
 		{
 			bool bRet = try_write_lock();
-			while (!bRet && i_cTimeout_Time.clock::now() < i_cTimeout_Time)
+			while (!bRet && Clock::now() < i_cTimeout_Time)
 			{
 				std::this_thread::yield();
 				bRet = try_write_lock();
@@ -276,6 +278,7 @@ namespace xstdtsl_internal
 			m_tMutex.write_unlock();
 		}
 	};
+/*
 	///
 	/// similar to std::lock, but attempts to perform a read lock on multiple read_write_mutex or similar locks that have member try_read_lock()
 	/// \returns -1 on success, the index of the lock that was unable to be aquired on partial success or failure
@@ -370,7 +373,7 @@ namespace xstdtsl_internal
 			std::get<nIdx>(tLocks).write_unlock();
 		}
     }
-
+*/
 	///
 	/// similar to std::scoped_lock, but operating on two read_write_mutex to gain read lock on both, ensuring a deadlock doesn't occur; blocking
 	///
