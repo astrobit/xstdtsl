@@ -132,7 +132,6 @@ namespace xstdtsl_internal
 		{
 			while (!try_write_lock())
 				std::this_thread::yield();
-			return m_pData;
 		}
 		///
 		/// releases a read lock; blocking
@@ -156,7 +155,7 @@ namespace xstdtsl_internal
 		/// attemps to obtain a read lock for a fixed duration; blocking for the duration
 		/// \returns true if a read lock is obtained; false otherwise
 		///
-		bool try_read_lock_for( const std::chrono::duration<Rep,Period>& i_cTimeout_Duration ) noexcept
+		template <class Rep, class Period> bool try_read_lock_for( const std::chrono::duration<Rep,Period>& i_cTimeout_Duration ) const noexcept
 		{
 			auto tStart = std::chrono::steady_clock::now();
 			bool bRet = try_read_lock();
@@ -171,7 +170,7 @@ namespace xstdtsl_internal
 		/// attemps to obtain a write lock for a fixed duration; blocking for the duration
 		/// \returns true if a write lock is obtained; false otherwise
 		///
-		bool try_write_lock_for( const std::chrono::duration<Rep,Period>& i_cTimeout_Duration ) noexcept
+		template <class Rep, class Period> bool try_write_lock_for( const std::chrono::duration<Rep, Period>& i_cTimeout_Duration ) const noexcept
 		{
 			auto tStart = std::chrono::steady_clock::now();
 			bool bRet = try_write_lock();
@@ -187,7 +186,7 @@ namespace xstdtsl_internal
 		/// \returns true if a read lock is obtained; false otherwise
 		///
 
-		bool try_read_lock_until( const std::chrono::time_point<Clock,Duration>& i_cTimeout_Time ) noexcept
+		template <class Clock, class Duration> bool try_read_lock_until( const std::chrono::time_point<Clock,Duration>& i_cTimeout_Time ) const noexcept
 		{
 			bool bRet = try_read_lock();
 			while (!bRet && i_cTimeout_Time.clock::now() < i_cTimeout_Time)
@@ -201,7 +200,7 @@ namespace xstdtsl_internal
 		/// attemps to obtain a write lock until a certain time; blocking for the duration
 		/// \returns true if a write lock is obtained; false otherwise
 		///
-		bool try_write_lock_until( const std::chrono::time_point<Clock,Duration>& i_cTimeout_Time ) noexcept
+		template <class Clock, class Duration> bool try_write_lock_until( const std::chrono::time_point<Clock, Duration>& i_cTimeout_Time ) const noexcept
 		{
 			bool bRet = try_write_lock();
 			while (!bRet && i_cTimeout_Time.clock::now() < i_cTimeout_Time)
@@ -290,8 +289,7 @@ namespace xstdtsl_internal
 		{
 			bSuccess = std::get<nIdx>(tLocks).try_read_lock();
 			nIdx++;
-		}
-		while (bSuccess && nIdx < std::tuple_size<tLocks>::value)
+		} while (bSuccess && nIdx < std::tuple_size<tLocks>::value);
 		if (bSuccess)
 			nIdx = -1;
 		else
@@ -311,8 +309,7 @@ namespace xstdtsl_internal
 		{
 			bSuccess = std::get<nIdx>(tLocks).try_write_lock();
 			nIdx++;
-		}
-		while (bSuccess && nIdx < std::tuple_size<tLocks>::value)
+		} while (bSuccess && nIdx < std::tuple_size<tLocks>::value);
 		if (bSuccess)
 			nIdx = -1;
 		else
@@ -330,8 +327,7 @@ namespace xstdtsl_internal
 		{
 			std::get<nIdx>(tLocks).read_lock();
 			nIdx++;
-		}
-		while (nIdx < std::tuple_size<tLocks>::value)
+		} while (nIdx < std::tuple_size<tLocks>::value);
     }
 	///
 	/// unlocks multiple read_write_mutex or similar locks that have member read_unlock(); blocking
@@ -359,13 +355,12 @@ namespace xstdtsl_internal
 		{
 			std::get<nIdx>(tLocks).write_lock();
 			nIdx++;
-		}
-		while (nIdx < std::tuple_size<tLocks>::value)
+		} while (nIdx < std::tuple_size<tLocks>::value);
     }
 	///
 	/// unlocks multiple read_write_mutex or similar locks that have member write_unlock(); blocking
 	///
-	template<typename lock1, typename lock2, typename... lock3> void read_unlock(lock1& i_l1, lock2& i_l2, lock3&... i_l3) noexcept
+	template<typename lock1, typename lock2, typename... lock3> void write_unlock(lock1& i_l1, lock2& i_l2, lock3&... i_l3) noexcept
     {
 		auto tLocks = std::tie(i_l1, i_l2, i_l3...);
 		size_t nIdx = std::tuple_size<tLocks>::value;
@@ -392,7 +387,7 @@ namespace xstdtsl_internal
 		dual_read_lock(
 			read_write_mutex & i_Mutex1, ///< the first read_write_mutex to lock for writing
 			read_write_mutex & i_Mutex2 ///< the second read_write_mutex to lock for writing
-			) noexcept : m_Mutex1(i_Mutex1), m_Mutex1(i_Mutex2)
+			) noexcept : m_Mutex1(i_Mutex1), m_Mutex2(i_Mutex2)
 		{
 			bool bWhich = true;
 			bool bDone = false;
@@ -404,8 +399,8 @@ namespace xstdtsl_internal
 
 				if (bWhich)
 				{
-					pM1 = m_Mutex2;
-					pM2 = m_Mutex1;
+					pM1 = &m_Mutex2;
+					pM2 = &m_Mutex1;
 				}
 
 				if (pM1->try_read_lock())
@@ -456,7 +451,7 @@ namespace xstdtsl_internal
 		dual_write_lock(
 			read_write_mutex & i_Mutex1, ///< the first read_write_mutex to lock for writing
 			read_write_mutex & i_Mutex2 ///< the second read_write_mutex to lock for writing
-			) noexcept : m_Mutex1(i_Mutex1), m_Mutex1(i_Mutex2)
+			) noexcept : m_Mutex1(i_Mutex1), m_Mutex2(i_Mutex2)
 		{
 			bool bWhich = true;
 			bool bDone = false;
@@ -468,8 +463,8 @@ namespace xstdtsl_internal
 
 				if (bWhich)
 				{
-					pM1 = m_Mutex2;
-					pM2 = m_Mutex1;
+					pM1 = &m_Mutex2;
+					pM2 = &m_Mutex1;
 				}
 
 				if (pM1->try_write_lock())
@@ -489,11 +484,11 @@ namespace xstdtsl_internal
 		///
 		/// copy constructor; deleted
 		///
-		dual_write_lock(const scoped_write_lock & i_cRHO) = delete;
+		dual_write_lock(const dual_write_lock & i_cRHO) = delete;
 		///
 		/// assignment operator; deleted
 		///
-		dual_write_lock & operator =(const scoped_write_lock & i_cRHO) = delete;
+		dual_write_lock & operator =(const dual_write_lock & i_cRHO) = delete;
 		///
 		/// destructor; releases write lock on both mutexes
 		///
@@ -527,39 +522,44 @@ namespace xstdtsl_internal
 			do
 			{
 				bWhich = !bWhich;
-				auto fnA = m_Mutex_Read.try_read_lock;
-				auto fnB = m_Mutex_Write.try_write_lock;
-				auto fnAu = m_Mutex_Read.read_unlock;
 
 				if (bWhich)
 				{
-					fnB = m_Mutex_Read.try_read_lock;
-					fnA = m_Mutex_Write.try_write_lock;
-					fnAu = m_Mutex_Write.write_unlock;
-				}
-
-				if (fnA())
-				{
-					if (fnB())
-						bDone = true;
-					else
+					if (m_Mutex_Read.try_read_lock())
 					{
-						fnAu();
-						std::this_thread::yield();
+						if (m_Mutex_Write.try_write_lock())
+							bDone = true;
+						else
+						{
+							m_Mutex_Read.read_unlock();
+						}
 					}
 				}
 				else
+				{
+					if (m_Mutex_Write.try_write_lock())
+					{
+						if (m_Mutex_Read.try_read_lock())
+							bDone = true;
+						else
+						{
+							m_Mutex_Write.write_unlock();
+						}
+					}
+				}
+
+				if (!bDone)
 					std::this_thread::yield();
 			} while (!bDone);
 		}
 		///
 		/// copy constructor; deleted
 		///
-		dual_read_write_lock(const scoped_read_write_lock & i_cRHO) = delete;
+		dual_read_write_lock(const dual_read_write_lock & i_cRHO) = delete;
 		///
 		/// assignment operator; deleted
 		///
-		dual_read_write_lock & operator =(const scoped_read_write_lock & i_cRHO) = delete;
+		dual_read_write_lock & operator =(const dual_read_write_lock & i_cRHO) = delete;
 		///
 		/// destructor; releases lock on both mutexes
 		///
