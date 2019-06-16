@@ -62,4 +62,6 @@ missing
 src/.deps
 src/.dirstamp
 *.pc
+test-driver
+*.trs
 
