@@ -63,7 +63,24 @@ void	xstdtsl_rwm_write_lock(xstdtsl_rwm_t i_pMutex)
 		pMutex->write_lock();
 	}
 }
-bool	xstdtsl_xstdtsl_rwm_try_read_lock(xstdtsl_rwm_t i_pMutex)
+void	xstdtsl_rwm_read_unlock(xstdtsl_rwm_t i_pMutex)
+{
+	if (i_pMutex != nullptr)
+	{
+		xstdtsl_internal::read_write_mutex * pMutex = reinterpret_cast<xstdtsl_internal::read_write_mutex *>(i_pMutex);
+		pMutex->read_unlock();
+	}
+}
+void	xstdtsl_rwm_write_unlock(xstdtsl_rwm_t i_pMutex)
+{
+	if (i_pMutex != nullptr)
+	{
+		xstdtsl_internal::read_write_mutex * pMutex = reinterpret_cast<xstdtsl_internal::read_write_mutex *>(i_pMutex);
+		pMutex->write_unlock();
+	}
+}
+
+bool	xstdtsl_rwm_try_read_lock(xstdtsl_rwm_t i_pMutex)
 {
 	bool bRet = false;
 	if (i_pMutex != nullptr)
@@ -73,7 +90,7 @@ bool	xstdtsl_xstdtsl_rwm_try_read_lock(xstdtsl_rwm_t i_pMutex)
 	}
 	return bRet;
 }
-bool	xstdtsl_xstdtsl_rwm_try_write_lock(xstdtsl_rwm_t i_pMutex)
+bool	xstdtsl_rwm_try_write_lock(xstdtsl_rwm_t i_pMutex)
 {
 	bool bRet = false;
 	if (i_pMutex != nullptr)

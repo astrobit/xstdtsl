@@ -1,4 +1,6 @@
 #pragma once
+#include <chrono>
+#include <thread>
 
 typedef void * xstdtsl_rwm_t;
 extern "C"

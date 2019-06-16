@@ -141,7 +141,7 @@ namespace xstdtsl_internal
 		void read_unlock(void) const noexcept
 		{
 			std::lock_guard<std::mutex> lock(m_mControl_Mutex);
-			if (m_nRead_Users > 0)
+			if (m_nRead_Users > 0 || m_nRead_Users <= -2)
 				m_nRead_Users--;
 		}
 		///
