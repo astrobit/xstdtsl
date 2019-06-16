@@ -10,8 +10,10 @@ std::atomic_bool g_bWorking(false);
 ///
 /// test to ensure that the mutex is fully unlocked
 ///
-void is_unlocked_test(xstdtsl::read_write_mutex * i_pMutex)
+void is_unlocked_test(xstdtsl::read_write_mutex * i_pMutex, bool i_bQuiet = false)
 {
+	if (!i_bQuiet)
+		std::cout << "checking to ensure read_write_mutex is unlocked" << std::endl;
 	// test to ensure constructor does not lock the mutex for read
 	assert (!i_pMutex->is_read_locked());
 	// test to ensure constructor does not lock the mutex for write
@@ -24,8 +26,10 @@ void is_unlocked_test(xstdtsl::read_write_mutex * i_pMutex)
 ///
 /// test to ensure that the mutex is only read locked
 ///
-void is_only_read_locked(xstdtsl::read_write_mutex * i_pMutex)
+void is_only_read_locked(xstdtsl::read_write_mutex * i_pMutex, bool i_bQuiet = false)
 {
+	if (!i_bQuiet)
+		std::cout << "checking to ensure read_write_mutex is locked for read only" << std::endl;
 	// test to ensure constructor does not lock the mutex for read
 	assert (i_pMutex->is_read_locked());
 	// test to ensure constructor does not lock the mutex for write
@@ -38,8 +42,10 @@ void is_only_read_locked(xstdtsl::read_write_mutex * i_pMutex)
 ///
 /// test to ensure that the mutex is only write locked
 ///
-void is_only_write_locked(xstdtsl::read_write_mutex * i_pMutex)
+void is_only_write_locked(xstdtsl::read_write_mutex * i_pMutex, bool i_bQuiet = false)
 {
+	if (!i_bQuiet)
+		std::cout << "checking to ensure read_write_mutex is locked for write only" << std::endl;
 	// test to ensure constructor does not lock the mutex for read
 	assert (!i_pMutex->is_read_locked());
 	// test to ensure constructor does not lock the mutex for write
@@ -57,12 +63,14 @@ void is_only_write_locked(xstdtsl::read_write_mutex * i_pMutex)
 
 void read_lock(xstdtsl::read_write_mutex * i_pMutex)
 {
+	std::cout << "checking to ensure read_write_mutex can be locked for read" << std::endl;
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
 	// aquire the read lock
 	i_pMutex->read_lock();
 	/// test to ensure correct read lock
 	is_only_read_locked(i_pMutex);
+	std::cout << "checking to ensure read_write_mutex can be unlocked after read lock" << std::endl;
 	// release the lock
 	i_pMutex->read_unlock();
 	/// test to ensure lock correctly released
@@ -76,12 +84,14 @@ void read_lock(xstdtsl::read_write_mutex * i_pMutex)
 
 void write_lock(xstdtsl::read_write_mutex * i_pMutex)
 {
+	std::cout << "checking to ensure read_write_mutex can be locked for write" << std::endl;
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
 	// aquire the read lock
 	i_pMutex->write_lock();
 	/// test to ensure correct read lock
 	is_only_write_locked(i_pMutex);
+	std::cout << "checking to ensure read_write_mutex can be unlocked after write lock" << std::endl;
 	// release the lock
 	i_pMutex->write_unlock();
 	/// test to ensure lock correctly released
@@ -97,10 +107,12 @@ void try_read_lock(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex can be locked for read using try_read_lock" << std::endl;
 	// aquire the read lock
 	assert(i_pMutex->try_read_lock()); /// try_read_lock should return true if the lock is aquired
 	/// test to ensure correct read lock
 	is_only_read_locked(i_pMutex);
+	std::cout << "checking to ensure read_write_mutex can be unlocked after read lock" << std::endl;
 	// release the lock
 	i_pMutex->read_unlock();
 	/// test to ensure lock correctly released
@@ -116,10 +128,12 @@ void try_write_lock(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex can be locked for write using try_write_lock" << std::endl;
 	// aquire the write lock
 	assert(i_pMutex->try_write_lock());
 	/// test to ensure correct read lock
 	is_only_write_locked(i_pMutex);
+	std::cout << "checking to ensure read_write_mutex can be unlocked after write lock" << std::endl;
 	// release the lock
 	i_pMutex->write_unlock();
 	/// test to ensure lock correctly released
@@ -136,16 +150,19 @@ void two_read_lock(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex can be locked twice in a row for read" << std::endl;
 	// aquire the read lock
 	i_pMutex->read_lock();
 	// aquire the read lock again
 	i_pMutex->read_lock();
 	/// test to ensure correct read lock
 	is_only_read_locked(i_pMutex);
+	std::cout << "checking to ensure read_write_mutex is still locked after a single unlock" << std::endl;
 	// release one lock
 	i_pMutex->read_unlock();
 	/// after a single unlock it should still be read locked
 	is_only_read_locked(i_pMutex);
+	std::cout << "checking to ensure read_write_mutex is unlocked after the second unlock" << std::endl;
 	// release final lock
 	i_pMutex->read_unlock();
 	/// test to ensure lock correctly released
@@ -161,27 +178,29 @@ void read_lock_limits(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex correctly handles the maximum number of read locks" << std::endl;
 	// aquire the read lock
-	uint64_t nMax_Values = (uint64_t)(std::numeric_limits<int>::max()) * 2 - 1;
-	std::cout << "locking" << std::endl;
+//	uint64_t nMax_Values = (uint64_t)(std::numeric_limits<int>::max()) * 2 - 1;
+	std::cout << "locking stage 1" << std::endl;
 	while (i_pMutex->lock_status() >= 0)
 	{
 		i_pMutex->read_lock();
-		is_only_read_locked(i_pMutex);
+		is_only_read_locked(i_pMutex,true);
 	}
 	std::cout << "locking stage 2" << std::endl;
 	while (i_pMutex->lock_status() < -2)
 	{
 		i_pMutex->read_lock();
-		is_only_read_locked(i_pMutex);
+		is_only_read_locked(i_pMutex,true);
 	}
-	std::cout << "unlocking" << std::endl;
+	std::cout << "checking to ensure read_write_mutex correctly handles unlocking after the maximum number of read locks" << std::endl;
+	std::cout << "unlocking stage 1" << std::endl;
 	// release locks
 //	size_t nCount = 0;
 	while (i_pMutex->lock_status() <= -2)
 	{
 //		std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
-		is_only_read_locked(i_pMutex);
+		is_only_read_locked(i_pMutex,true);
 		i_pMutex->read_unlock();
 //		nCount++;
 	}
@@ -190,7 +209,7 @@ void read_lock_limits(xstdtsl::read_write_mutex * i_pMutex)
 	{
 //		if (nCount % 10000 == 0)
 //			std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
-		is_only_read_locked(i_pMutex);
+		is_only_read_locked(i_pMutex,true);
 		i_pMutex->read_unlock();
 //		nCount++;
 	}
@@ -208,6 +227,7 @@ void write_then_try(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex doesnt allow a read lock or additional write lock when locked for write" << std::endl;
 	// aquire the write lock
 	i_pMutex->write_lock();
 	// confirm write lock
@@ -216,6 +236,7 @@ void write_then_try(xstdtsl::read_write_mutex * i_pMutex)
 	assert(!i_pMutex->try_read_lock());
 	// try to lock for writing -- should fail and not block
 	assert(!i_pMutex->try_write_lock());
+	std::cout << "checking to ensure read_write_mutex correctly unlocks after a write lock in which read and write lock attempts are subsequently made" << std::endl;
 	// unlock
 	i_pMutex->write_unlock();
 	/// test to ensure lock correctly released
@@ -231,6 +252,7 @@ void write_then_write(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex blocks on second write lock attempt" << std::endl;
 	// aquire the write lock
 	i_pMutex->write_lock();
 	// confirm write lock
@@ -248,6 +270,7 @@ void write_then_read(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex blocks on read lock attempt while write locked" << std::endl;
 	// aquire the write lock
 	i_pMutex->write_lock();
 	// confirm write lock
@@ -264,6 +287,7 @@ void write_then_read(xstdtsl::read_write_mutex * i_pMutex)
 void read_then_write(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
+	std::cout << "checking to ensure read_write_mutex blocks on write lock attempt while read locked" << std::endl;
 	g_bWorking = true;
 	// aquire the read lock
 	i_pMutex->read_lock();
@@ -300,6 +324,7 @@ void test_lock_thread_safe(test_fn_single_mutex pFn, xstdtsl::read_write_mutex *
 		}
 	}
 	cThr.join();
+	std::cout << "this test complete and passed" << std::endl;
 }
 
 // test method for thread that should block due to attempting read locks
@@ -336,11 +361,19 @@ void test_lock_blocking_thread(test_fn_single_mutex pFn, xstdtsl::read_write_mut
 		else 
 			i_pMutex->write_unlock();
 	}
+	std::cout << "this test complete and passed" << std::endl;
 }
 
-int main(void)
+int main(int i_nNum_Params, char * i_pParams[])
 {
+	std::cout << i_nNum_Params << " params." << std::endl;
+	for (size_t nI = 1; nI < i_nNum_Params; nI++)
+	{
+		std::cout << nI << ": " << i_pParams[nI] << std::endl;
+	}
+
 	xstdtsl::read_write_mutex cMutex;
+	std::cout << "checking to ensure read_write_mutex constructor creates an unlocked mutex" << std::endl;
 	// test to ensure the mutex is unlocked after the constructor
 	is_unlocked_test(&cMutex);
 	// test to ensure we can aquire read lock using read_lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
@@ -368,5 +401,7 @@ int main(void)
 
 	//@@TODO: try ... until; try ... for
 	//@@TODO: lock guard
-	//@@TODO: dual_read, dual_write, dual_read_write		
+	//@@TODO: dual_read, dual_write, dual_read_write	
+
+	return 0;	
 }
