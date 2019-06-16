@@ -129,44 +129,51 @@ void read_lock_limits(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
 	g_bWorking = true;
-	std::cout << "checking to ensure read_write_mutex correctly handles the maximum number of read locks" << std::endl;
-	// aquire the read lock
-//	uint64_t nMax_Values = (uint64_t)(std::numeric_limits<int>::max()) * 2 - 1;
-	std::cout << "locking stage 1" << std::endl;
-	while (i_pMutex->lock_status() >= 0)
+	if (sizeof(int) <= 4)
 	{
-		i_pMutex->read_lock();
-		is_only_read_locked(i_pMutex,true);
+		std::cout << "checking to ensure read_write_mutex correctly handles the maximum number of read locks" << std::endl;
+		std::cout << "warning: this test will take several minutes to complete. On ~2 GHz systems in which `int' is 32 bits, expect this test to take ~10 minutes; " << std::endl;
+		
+		// aquire the read lock
+	//	uint64_t nMax_Values = (uint64_t)(std::numeric_limits<int>::max()) * 2 - 1;
+		std::cout << "locking stage 1" << std::endl;
+		while (i_pMutex->lock_status() >= 0)
+		{
+			i_pMutex->read_lock();
+			is_only_read_locked(i_pMutex,true);
+		}
+		std::cout << "locking stage 2" << std::endl;
+		while (i_pMutex->lock_status() < -2)
+		{
+			i_pMutex->read_lock();
+			is_only_read_locked(i_pMutex,true);
+		}
+		std::cout << "checking to ensure read_write_mutex correctly handles unlocking after the maximum number of read locks" << std::endl;
+		std::cout << "unlocking stage 1" << std::endl;
+		// release locks
+	//	size_t nCount = 0;
+		while (i_pMutex->lock_status() <= -2)
+		{
+	//		std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
+			is_only_read_locked(i_pMutex,true);
+			i_pMutex->read_unlock();
+	//		nCount++;
+		}
+		std::cout << "unlocking stage 2" << std::endl;
+		while (i_pMutex->lock_status() > 0)
+		{
+	//		if (nCount % 10000 == 0)
+	//			std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
+			is_only_read_locked(i_pMutex,true);
+			i_pMutex->read_unlock();
+	//		nCount++;
+		}
+		std::cout << "multi-read lock test complete" << std::endl;
+		/// test to ensure lock correctly released
+		is_unlocked_test(i_pMutex);
 	}
-	std::cout << "locking stage 2" << std::endl;
-	while (i_pMutex->lock_status() < -2)
-	{
-		i_pMutex->read_lock();
-		is_only_read_locked(i_pMutex,true);
-	}
-	std::cout << "checking to ensure read_write_mutex correctly handles unlocking after the maximum number of read locks" << std::endl;
-	std::cout << "unlocking stage 1" << std::endl;
-	// release locks
-//	size_t nCount = 0;
-	while (i_pMutex->lock_status() <= -2)
-	{
-//		std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
-		is_only_read_locked(i_pMutex,true);
-		i_pMutex->read_unlock();
-//		nCount++;
-	}
-	std::cout << "unlocking stage 2" << std::endl;
-	while (i_pMutex->lock_status() > 0)
-	{
-//		if (nCount % 10000 == 0)
-//			std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
-		is_only_read_locked(i_pMutex,true);
-		i_pMutex->read_unlock();
-//		nCount++;
-	}
-	std::cout << "multi-read lock test complete" << std::endl;
-	/// test to ensure lock correctly released
-	is_unlocked_test(i_pMutex);
+	else
+		std::cout << "skipping read lock limit test due to size of `int'" << std::endl;
 	g_bWorking = false;
 }
 
