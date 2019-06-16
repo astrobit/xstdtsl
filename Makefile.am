@@ -6,7 +6,7 @@ libxstdtsl_la_SOURCES = src/xstdtsl_mutex.cpp
 libxstdtsl_la_CFLAGS = --std=c++17 -pthread
 libxstdtsl_la_LDFLAGS = -version-info 0:0:0
 check_PROGRAMS = xstdtsl_mutex_test
-xstdtsl_mutex_test_SOURCES = src/xstdtsl_mutex_test.cpp
+xstdtsl_mutex_test_SOURCES = src/xstdtsl_mutex_test.cpp src/xstdtsl_mutex_test_common.cpp
 xstdtsl_mutex_test_CFLAGS = --std=c++17 -pthread
 xstdtsl_mutex_test_LDFLAGS = -lpthread -lxstdtsl
 
