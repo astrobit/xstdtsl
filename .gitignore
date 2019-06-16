@@ -64,4 +64,5 @@ src/.dirstamp
 *.pc
 test-driver
 *.trs
+configure.scan
 
