@@ -10,9 +10,12 @@ m4_define([package_auth_email],[bwmulligan@astronaos.com])
 # API version
 m4_define([api_version],package_version_major)
 
+AC_PREREQ([2.69])
 AC_INIT(package_name,package_version_major.package_version_minor.package_version_micro,package_auth_email,package_name_long,package_repository)
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([include/xstdtsl_mutex_internal.hpp])
 
+# LT_PREREQ(ver?)
 LT_INIT
 
 PKG_PROG_PKG_CONFIG
@@ -28,6 +31,24 @@ AM_INIT_AUTOMAKE
 AC_LANG(C++)
 
 AC_PROG_CXX
+AC_PROG_AWK
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
+AC_PROG_RANLIB
+# Checks for libraries.
+AC_CHECK_LIB([pthread], [pthread_testcancel])
+
+# Checks for header files.
+AC_CHECK_HEADERS([unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_CHECK_HEADER_STDBOOL
+AC_C_INLINE
+AC_TYPE_SIZE_T
+AC_TYPE_UINT64_T
 
 #AX_CXX_COMPILE_STDCXX(11,noext,mandatory) #use c++11 standard, required in a variety of places
 
