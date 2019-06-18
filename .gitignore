@@ -41,6 +41,14 @@ xstdtsl_mutex_test
 *.idb
 *.log
 *.tlog
+*ipdb
+*pdb
+*iobj
+*.iobj
+*ipch
+*.exp
+*.ilk
+*.FileListAbsolute.txt
 
 #Autotools, Libtool
 .libs
