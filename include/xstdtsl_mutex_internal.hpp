@@ -3,7 +3,9 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#ifndef _MSC_VER
 #include <pthread.h>
+#endif
 #if (__cplusplus < 201103L) //c++11
 #define noexcept
 #endif
@@ -13,6 +15,7 @@ namespace xstdtsl_internal
 //#if (__cplusplus < 201103L) //c++11
 	/// 
 	/// mutex class implemented using pthreads; useful prior to c++11
+#ifndef _MSC_VER
 	class mutex
 	{
 	private:
@@ -59,6 +62,7 @@ namespace xstdtsl_internal
 			m_mMutex.unlock();
 		}
 	};
+#endif
 
 #if 0
 	template<class T> class atomic
