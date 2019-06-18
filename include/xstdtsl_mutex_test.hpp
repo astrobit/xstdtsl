@@ -8,6 +8,8 @@
 /// function prototype for single mutex test functions
 ///
 typedef void (*test_fn_single_mutex) (xstdtsl::read_write_mutex *);
+typedef void (*test_fn_dual_mutex) (xstdtsl::read_write_mutex *, xstdtsl::read_write_mutex *);
+typedef void (*test_fn_dual_mutex_blocking) (bool, xstdtsl::read_write_mutex *, xstdtsl::read_write_mutex *);
 typedef void (*fn_try_until_t)(xstdtsl::read_write_mutex * i_pMutex, const std::chrono::steady_clock::time_point & i_tTime);
 typedef void (*fn_try_for_t)(xstdtsl::read_write_mutex * i_pMutex, const std::chrono::milliseconds & i_tDuration);
 
@@ -50,4 +52,13 @@ extern void test_lock_blocking_for(fn_try_for_t pFn, xstdtsl::read_write_mutex *
 ///
 extern void test_lock_blocking_until(fn_try_until_t pFn, xstdtsl::read_write_mutex * i_pMutex, size_t i_nSleep_Length_ms = 250) noexcept;
 
+///
+/// wrapper to test a lock; throws an exception after some time (default = 250 ms) if the testing function blocks or locks
+///
+extern void test_dual_lock_nonblocking(test_fn_dual_mutex pFn, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2, const char * i_psFault_String, size_t i_nSleep_Length_ms = 250);
+
+///
+/// wrapper to test a lock that blocks due to a read or write lock; automatically starts releasing locks after a designated time (default = 250 ms)
+///
+extern void test_dual_lock_blocking(test_fn_dual_mutex_blocking pFn, bool i_bWhich, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2, size_t i_nSleep_Length_ms = 250) noexcept;
 

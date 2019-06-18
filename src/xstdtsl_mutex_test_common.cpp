@@ -193,3 +193,63 @@ void test_lock_blocking_for(fn_try_for_t pFn, xstdtsl::read_write_mutex * i_pMut
 	i_pMutex->set_lock_status(0);
 	std::cout << "this test complete and passed" << std::endl;
 }
+
+
+
+void test_dual_lock_nonblocking(test_fn_dual_mutex pFn, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2, const char * i_psFault_String, size_t i_nSleep_Length_ms)
+{
+	// test to ensure we can aquire read lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
+	std::thread cThr(pFn,i_pMutex1,i_pMutex2);
+	// wait for thread to start working
+	while (!g_bWorking)
+		std::this_thread::yield();
+	//
+	if (i_nSleep_Length_ms != (size_t)(-1))
+	{
+		std::chrono::steady_clock::time_point tEnd = std::chrono::steady_clock::now() + std::chrono::milliseconds(i_nSleep_Length_ms);
+//		std::this_thread::sleep_for(std::chrono::milliseconds(i_nSleep_Length_ms)); // sleep for 250 ms; should be plenty of time to complete the read lock attempt
+		while (g_bWorking && std::chrono::steady_clock::now() < tEnd)
+			std::this_thread::yield();
+		// ensure the thread completed
+		if (g_bWorking)
+		{
+			std::cerr << i_psFault_String << std::endl;
+			throw (1);
+		}
+	}
+	cThr.join();
+	std::cout << "this test complete and passed" << std::endl;
+}
+
+// test method for thread that should block due to attempting read locks
+void test_dual_lock_blocking(test_fn_dual_mutex_blocking pFn, bool i_bWhich, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2, size_t i_nSleep_Length_ms) noexcept
+{
+	// test to ensure we can aquire read lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
+	std::thread cThr(pFn,i_bWhich,i_pMutex1,i_pMutex2);
+	// wait for thread to start working
+	while (!g_bWorking)
+		std::this_thread::yield();
+	//
+	std::chrono::steady_clock::time_point tEnd = std::chrono::steady_clock::now() + std::chrono::milliseconds(i_nSleep_Length_ms);
+	std::chrono::steady_clock::time_point tEnd2 = tEnd + std::chrono::milliseconds(i_nSleep_Length_ms);
+//		std::this_thread::sleep_for(std::chrono::milliseconds(i_nSleep_Length_ms)); // sleep for 250 ms; should be plenty of time to complete the read lock attempt
+	while (g_bWorking && std::chrono::steady_clock::now() < tEnd)
+		std::this_thread::yield();
+
+	// ensure the thread is blocking
+	assert(g_bWorking);
+	// clear the lock on one of the mutexes
+	i_pMutex1->set_lock_status(0);
+	if (i_bWhich)
+		i_pMutex2->set_lock_status(0);
+	while (g_bWorking && std::chrono::steady_clock::now() < tEnd2) // wait for thread to comlete
+	{
+		std::this_thread::yield();
+	}
+	assert(!g_bWorking);
+	cThr.join();
+	// ensure all locks released
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	std::cout << "this test complete and passed" << std::endl;
+}

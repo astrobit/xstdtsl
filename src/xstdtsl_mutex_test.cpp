@@ -510,9 +510,205 @@ void write_lock_guard_exception_nonblocking(xstdtsl::read_write_mutex * i_pMutex
 	g_bWorking = false;
 }
 
+void dual_read_lock_nonblocking(xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	{
+		xstdtsl::dual_read_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_read_locked(i_pMutex1);
+		is_only_read_locked(i_pMutex2);
+	}
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+void dual_read_lock_nonblocking_exception(xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	try
+	{
+		xstdtsl::dual_read_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_read_locked(i_pMutex1);
+		is_only_read_locked(i_pMutex2);
+		throw 1;
+	}
+	catch (int i_iExc)
+	{
+		std::cout << "caught exception" << std::endl;
+		if (i_iExc != 1) // some other exception occurred
+			throw 1;
+	}
+
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+void dual_read_lock_blocking(bool i_bWhich, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	i_pMutex1->set_lock_status(-2);
+	if (i_bWhich)
+		i_pMutex2->set_lock_status(-2);
+	{
+		xstdtsl::dual_read_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_read_locked(i_pMutex1);
+		is_only_read_locked(i_pMutex2);
+	}
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+
+void dual_write_lock_nonblocking(xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	{
+		xstdtsl::dual_write_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_write_locked(i_pMutex1);
+		is_only_write_locked(i_pMutex2);
+	}
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+void dual_write_lock_nonblocking_exception(xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	try
+	{
+		xstdtsl::dual_write_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_write_locked(i_pMutex1);
+		is_only_write_locked(i_pMutex2);
+		throw 1;
+	}
+	catch (int i_iExc)
+	{
+		std::cout << "caught exception" << std::endl;
+		if (i_iExc != 1) // some other exception occurred
+			throw 1;
+	}
+
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+
+void dual_write_lock_blocking(bool i_bWhich, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	i_pMutex1->set_lock_status(-2);
+	if (i_bWhich)
+		i_pMutex2->set_lock_status(-2);
+	{
+		xstdtsl::dual_write_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_write_locked(i_pMutex1);
+		is_only_write_locked(i_pMutex2);
+	}
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+
+
+
+void dual_read_write_lock_nonblocking(xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	{
+		xstdtsl::dual_read_write_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_read_locked(i_pMutex1);
+		is_only_write_locked(i_pMutex2);
+	}
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+void dual_read_write_lock_nonblocking_exception(xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	try
+	{
+		xstdtsl::dual_read_write_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_read_locked(i_pMutex1);
+		is_only_write_locked(i_pMutex2);
+		throw 1;
+	}
+	catch (int i_iExc)
+	{
+		std::cout << "caught exception" << std::endl;
+		if (i_iExc != 1) // some other exception occurred
+			throw 1;
+	}
+
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
+
+
+void dual_read_write_lock_blocking(bool i_bWhich, xstdtsl::read_write_mutex * i_pMutex1, xstdtsl::read_write_mutex * i_pMutex2)
+{
+	assert (i_pMutex1 != nullptr);
+	assert (i_pMutex2 != nullptr);
+	g_bWorking = true;
+	i_pMutex1->set_lock_status(0);
+	i_pMutex2->set_lock_status(0);
+	i_pMutex1->set_lock_status(-2);
+	if (i_bWhich)
+		i_pMutex2->set_lock_status(-2);
+	{
+		xstdtsl::dual_read_write_lock cLock(*i_pMutex1,*i_pMutex2);
+		is_only_read_locked(i_pMutex1);
+		is_only_write_locked(i_pMutex2);
+	}
+	is_unlocked_test(i_pMutex1);
+	is_unlocked_test(i_pMutex2);
+	g_bWorking = false;
+}
 int main(int i_nNum_Params, char * i_pParams[])
 {
+	std::cout << "--------------=============== read_write_mutex non-blocking tests ===============--------------" << std::endl;
 	xstdtsl::read_write_mutex cMutex;
+	xstdtsl::read_write_mutex cMutex2; // used for dual_..._lock tests
 	std::cout << "checking to ensure read_write_mutex constructor creates an unlocked mutex" << std::endl;
 	// test to ensure the mutex is unlocked after the constructor
 	is_unlocked_test(&cMutex);
@@ -539,6 +735,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 	// test to ensure that try_read_until aquires lock when unlocked
 	test_lock_nonblocking(try_read_until_nonblocking,&cMutex,"try_read_until blocked unnecessarily. terminating." );
 
+	std::cout << "--------------=============== read_write_mutex blocking tests ===============--------------" << std::endl;
 	// blocking tests
 	// aquire write then attempt another write
 	test_lock_blocking(write_then_write,&cMutex);
@@ -548,6 +745,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 	test_lock_blocking(read_then_write,&cMutex);
 
 
+	std::cout << "--------------=============== read_write_mutex timed blocking tests ===============--------------" << std::endl;
 	// aquire write when attempt a write until a given time
 	test_lock_blocking_until(try_write_until_blocking,&cMutex);
 	// aquire write when attempt a write until a given time
@@ -558,17 +756,53 @@ int main(int i_nNum_Params, char * i_pParams[])
 	test_lock_blocking_for(try_read_for_blocking,&cMutex);
 
 
+	std::cout << "--------------=============== read_lock_guard ===============--------------" << std::endl;
 
 	// test to ensure that read_lock_guard aquires a read lock then releases when out of scope
 	test_lock_nonblocking(read_lock_guard_nonblocking,&cMutex,"read_lock_guard blocked unnecessarily. terminating." );
 	// test to ensure that read_lock_guard aquires a read lock then releases when out of scope when an exception occurs
 	test_lock_nonblocking(read_lock_guard_exception_nonblocking,&cMutex,"read_lock_guard blocked unnecessarily when there was an exception. terminating." );
+
+	std::cout << "--------------=============== write_lock_guard ===============--------------" << std::endl;
+
 	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
 	test_lock_nonblocking(write_lock_guard_nonblocking,&cMutex,"write_lock_guard blocked unnecessarily. terminating." );
 	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope when an exception occurs
 	test_lock_nonblocking(write_lock_guard_exception_nonblocking,&cMutex,"write_lock_guard blocked unnecessarily when there was an exception. terminating." );
 
-	//@@TODO: dual_read, dual_write, dual_read_write	
+	// dual_read tests
+	std::cout << "--------------=============== dual_read_lock non-blocking ===============--------------" << std::endl;
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_nonblocking(dual_read_lock_nonblocking,&cMutex,&cMutex2,"dual_read_lock blocked unnecessarily. terminating." );
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_nonblocking(dual_read_lock_nonblocking_exception,&cMutex,&cMutex2,"dual_read_lock blocked unnecessarily when there was an exception. terminating." );
+	std::cout << "--------------=============== dual_read_lock blocking ===============--------------" << std::endl;
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_blocking(dual_read_lock_blocking,false,&cMutex,&cMutex2);
+	test_dual_lock_blocking(dual_read_lock_blocking,false,&cMutex2,&cMutex);
+	test_dual_lock_blocking(dual_read_lock_blocking,true,&cMutex,&cMutex2);
 
+
+	std::cout << "--------------=============== dual_write_lock ===============--------------" << std::endl;
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_nonblocking(dual_write_lock_nonblocking,&cMutex,&cMutex2,"dual_write_lock blocked unnecessarily. terminating." );
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_nonblocking(dual_write_lock_nonblocking_exception,&cMutex,&cMutex2,"dual_write_lock blocked unnecessarily when there was an exception. terminating." );
+	std::cout << "--------------=============== dual_write_lock blocking ===============--------------" << std::endl;
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_blocking(dual_write_lock_blocking,false,&cMutex,&cMutex2);
+	test_dual_lock_blocking(dual_write_lock_blocking,false,&cMutex2,&cMutex);
+	test_dual_lock_blocking(dual_write_lock_blocking,true,&cMutex,&cMutex2);
+
+	std::cout << "--------------=============== dual_read_write_lock ===============--------------" << std::endl;
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_nonblocking(dual_read_write_lock_nonblocking,&cMutex,&cMutex2,"dual_read_write_lock blocked unnecessarily. terminating." );
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_nonblocking(dual_read_write_lock_nonblocking_exception,&cMutex,&cMutex2,"dual_read_write_lock blocked unnecessarily when there was an exception. terminating." );
+	std::cout << "--------------=============== dual_read_write_lock blocking ===============--------------" << std::endl;
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_dual_lock_blocking(dual_read_write_lock_blocking,false,&cMutex,&cMutex2);
+	test_dual_lock_blocking(dual_read_write_lock_blocking,false,&cMutex2,&cMutex);
+	test_dual_lock_blocking(dual_read_write_lock_blocking,true,&cMutex,&cMutex2);
 	return 0;	
 }
