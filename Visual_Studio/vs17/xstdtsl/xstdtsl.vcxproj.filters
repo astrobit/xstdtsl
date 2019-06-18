@@ -18,6 +18,9 @@
     <ClInclude Include="..\..\..\include\xstdtsl_mutex_internal.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\xstdtsl_mutex_C.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\xstdtsl_mutex.cpp">
