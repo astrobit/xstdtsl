@@ -109,4 +109,13 @@ void	xstdtsl_rwm_delete_read_write_mutex(xstdtsl_rwm_t & io_pMutex)
 		io_pMutex = nullptr;
 	}
 }
+void	xstdtsl_rwm_set_status(xstdtsl_rwm_t i_pMutex, int i_iStatus)
+{
+	if (i_pMutex != nullptr)
+	{
+		xstdtsl_internal::read_write_mutex * pMutex = reinterpret_cast<xstdtsl_internal::read_write_mutex *>(i_pMutex);
+		pMutex->set_status(i_iStatus);
+	}
+}
+
 

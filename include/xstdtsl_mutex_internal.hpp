@@ -3,9 +3,113 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <pthread.h>
+#if (__cplusplus < 201103L) //c++11
+#define noexcept
+#endif
 
 namespace xstdtsl_internal
 {
+//#if (__cplusplus < 201103L) //c++11
+	/// 
+	/// mutex class implemented using pthreads; useful prior to c++11
+	class mutex
+	{
+	private:
+		pthread_mutex_t m_mMutex;
+	public:
+		mutex(void)
+		{
+			if (pthread_mutex_init(&m_mMutex,nullptr) != 0)
+				throw 1; // @@TODO: throw an appropriate code
+		}
+		~mutex(void) noexcept
+		{
+			pthread_mutex_destroy(&m_mMutex);
+		}
+
+		mutex(const mutex & i_cRHO) = delete;
+		mutex & operator =(const mutex & i_cRHO) = delete;
+		void lock(void) noexcept
+		{
+			pthread_mutex_lock(&m_mMutex);
+		}
+		void unlock(void) noexcept
+		{
+			pthread_mutex_unlock(&m_mMutex);
+		}
+		bool try_lock(void) noexcept
+		{
+			return pthread_mutex_trylock(&m_mMutex);
+		}
+	};
+	template <class T> class lock_guard
+	{
+	private:
+		T & m_mMutex;
+	public:
+		lock_guard(T & i_mMutex) noexcept : m_mMutex(i_mMutex)
+		{
+			m_mMutex.lock();
+		}
+		lock_guard(const lock_guard & i_cRHO) = delete;
+		lock_guard & operator =(const lock_guard & i_cRHO) = delete;
+		~lock_guard(void) noexcept
+		{
+			m_mMutex.unlock();
+		}
+	};
+
+#if 0
+	template<class T> class atomic
+	{
+	private:
+		T 		m_tData;
+		mmutable utex 	m_mMutex;
+	public:
+		atomic(void) = default;
+		atomic(atomic & i_cRHO) = delete;
+		atomic(const T & i_tData)
+		{
+			m_tData = i_tData;
+		}
+		T operator =( const T &i_tData)
+		{
+			store(i_tData);
+			return i_tData;
+		}
+		bool is_lock_free(void) const
+		{
+			return false;
+		}
+		void store(const T & i_tData)
+		{
+			lock_guard(m_mMutex);
+			m_tData = i_tData;
+		}
+		T load(void) const
+		{
+			T tRet;
+			lock_guard(m_mMutex);
+			tRet = m_tData;
+			return tRet;
+		}
+		operator T(void) const
+		{
+			return load();
+		}
+		T exchange(T i_tData)
+		{
+			T tRet;
+			lock_guard(m_mMutex);
+			tRet = m_tData;
+			m_tData = i_tData;
+			return tRet;
+		}			
+
+		//@@TODO implement an atomic class for pre c++11 compilation
+	}
+#endif
 	///
 	/// The read/write mutex is used for atomic like read/write access to complex types. It allows multiple users to have read access while write access is denied, and a single user to have write access while all reads and other writes are denied.
 	///
@@ -87,6 +191,14 @@ namespace xstdtsl_internal
 		int lock_status(void) const noexcept
 		{
 			return m_nRead_Users;
+		}
+		///
+		/// set the status of the mutex. This function is provided for testing purposes and should never be used in production code
+		///
+		void set_status(int i_nStatus) noexcept
+		{
+			std::lock_guard<std::mutex> lock(m_mControl_Mutex);
+			m_nRead_Users = i_nStatus;
 		}
 
 		///

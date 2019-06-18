@@ -17,6 +17,7 @@ extern "C"
 	bool	xstdtsl_rwm_try_read_lock(xstdtsl_rwm_t);
 	bool	xstdtsl_rwm_try_write_lock(xstdtsl_rwm_t);
 	void	xstdtsl_rwm_delete_read_write_mutex(xstdtsl_rwm_t &);
+	void	xstdtsl_rwm_set_status(xstdtsl_rwm_t, int);
 }
 
 namespace xstdtsl
@@ -31,6 +32,7 @@ namespace xstdtsl
 	private:
 		xstdtsl_rwm_t						m_cRW_Mutex;
 	public:
+		enum class status {unlocked=0,write_locked=-1,maximum_read_lock=-2};
 		///
 		/// constructor; sets the initial number of read/write users to 0
 		///
@@ -81,9 +83,26 @@ namespace xstdtsl
 		/// gets the current number of users of the read or write lock
 		/// \returns 0 if no read or write locks exist; -1 if a write lock exists; and a number > 0 or <= -2 if a read lock exists. If the number is negative, there are (std::numeric_limits<int>.max() + (<return value> - std::numeric_limits<int>.min())) users
 		///
-		int lock_status(void) const noexcept
+		int get_lock_status(void) const noexcept
 		{
 			return xstdtsl_rwm_lock_status(m_cRW_Mutex);
+		}
+		///
+		/// tests the lock status against known status (unlocked, write_locked, or maximally_read_locked)
+		/// \returns true if the status matches the desired value; false otherwise
+		///
+		bool test_lock_status(status i_eStatus) const noexcept
+		{
+			return xstdtsl_rwm_lock_status(m_cRW_Mutex) == (int)i_eStatus;
+		}
+
+		///
+		/// set the current status of the lock
+		/// this function should be used only for testing and never in production code
+		///
+		void set_lock_status(int i_nStatus) noexcept
+		{
+			xstdtsl_rwm_set_status(m_cRW_Mutex,i_nStatus);
 		}
 
 		///
