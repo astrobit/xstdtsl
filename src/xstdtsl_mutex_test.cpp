@@ -128,52 +128,87 @@ void two_read_lock(xstdtsl::read_write_mutex * i_pMutex)
 void read_lock_limits(xstdtsl::read_write_mutex * i_pMutex)
 {
 	assert (i_pMutex != nullptr);
+	assert (i_pMutex->is_unlocked());
 	g_bWorking = true;
-	if (sizeof(int) <= 4)
-	{
-		std::cout << "checking to ensure read_write_mutex correctly handles the maximum number of read locks" << std::endl;
-		std::cout << "warning: this test will take several minutes to complete. On ~2 GHz systems in which `int' is 32 bits, expect this test to take ~10 minutes; " << std::endl;
-		
-		// aquire the read lock
-	//	uint64_t nMax_Values = (uint64_t)(std::numeric_limits<int>::max()) * 2 - 1;
-		std::cout << "locking stage 1" << std::endl;
-		while (i_pMutex->lock_status() >= 0)
-		{
-			i_pMutex->read_lock();
-			is_only_read_locked(i_pMutex,true);
-		}
-		std::cout << "locking stage 2" << std::endl;
-		while (i_pMutex->lock_status() < -2)
-		{
-			i_pMutex->read_lock();
-			is_only_read_locked(i_pMutex,true);
-		}
-		std::cout << "checking to ensure read_write_mutex correctly handles unlocking after the maximum number of read locks" << std::endl;
-		std::cout << "unlocking stage 1" << std::endl;
-		// release locks
-	//	size_t nCount = 0;
-		while (i_pMutex->lock_status() <= -2)
-		{
-	//		std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
-			is_only_read_locked(i_pMutex,true);
-			i_pMutex->read_unlock();
-	//		nCount++;
-		}
-		std::cout << "unlocking stage 2" << std::endl;
-		while (i_pMutex->lock_status() > 0)
-		{
-	//		if (nCount % 10000 == 0)
-	//			std::cout << nCount << " --- " << i_pMutex->lock_status() << std::endl;
-			is_only_read_locked(i_pMutex,true);
-			i_pMutex->read_unlock();
-	//		nCount++;
-		}
-		std::cout << "multi-read lock test complete" << std::endl;
-		/// test to ensure lock correctly released
-		is_unlocked_test(i_pMutex);
-	}
-	else
-		std::cout << "skipping read lock limit test due to size of `int'" << std::endl;
+	
+	// aquire the read lock
+//	uint64_t nMax_Values = (uint64_t)(std::numeric_limits<int>::max()) * 2 - 1;
+
+	int nMin = std::numeric_limits<int>::min();
+	int nMax = std::numeric_limits<int>::max();
+	std::cout << "set read state to maximum positive read" << std::endl;
+	i_pMutex->set_lock_status(nMax);
+	is_only_read_locked(i_pMutex);
+	std::cout << "test rollover to negative read" << std::endl;
+	i_pMutex->read_lock();
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == nMin);
+	std::cout << "test increment from most negative read" << std::endl;
+	i_pMutex->read_lock();
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == (nMin + 1));
+	std::cout << "set read state to limit" << std::endl;
+	i_pMutex->set_lock_status(-2);
+	is_only_read_locked(i_pMutex);
+	std::cout << "test maximum read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == -2);
+	std::cout << "test maximum read lock status" << std::endl;
+	assert(i_pMutex->test_lock_status(xstdtsl::read_write_mutex::status::maximum_read_lock));
+	std::cout << "test that a try read fails at read limit" << std::endl;
+	assert (!i_pMutex->try_read_lock());
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->test_lock_status(xstdtsl::read_write_mutex::status::maximum_read_lock));
+	std::cout << "test that a try write fails at read limit" << std::endl;
+	assert (!i_pMutex->try_write_lock());
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->test_lock_status(xstdtsl::read_write_mutex::status::maximum_read_lock));
+
+	std::cout << "test read lock unlock from maximum lock" << std::endl;
+	i_pMutex->read_unlock();
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == -3);
+	std::cout << "test rollover to positive read" << std::endl;
+	i_pMutex->set_lock_status(nMin);
+	i_pMutex->read_unlock();
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == nMax);
+
+	std::cout << "test try read at negative rollover (should succeed)" << std::endl;
+	i_pMutex->set_lock_status(nMin);
+	assert (i_pMutex->try_read_lock());
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == (nMin + 1));
+	std::cout << "test try write at negative rollover (should fail)" << std::endl;
+	i_pMutex->set_lock_status(nMin);
+	assert (!i_pMutex->try_write_lock());
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == nMin);
+
+	std::cout << "test try read at positive rollover (should succeed)" << std::endl;
+	i_pMutex->set_lock_status(nMax);
+	assert (i_pMutex->try_read_lock());
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == nMin);
+	std::cout << "test try write at negative rollover (should fail)" << std::endl;
+	i_pMutex->set_lock_status(nMax);
+	assert (!i_pMutex->try_write_lock());
+	is_only_read_locked(i_pMutex);
+	std::cout << "test read lock value" << std::endl;
+	assert(i_pMutex->get_lock_status() == nMax);
+
+	std::cout << "set status to unlocked" << std::endl;
+	i_pMutex->set_lock_status(0);
+	/// test to ensure lock correctly released
+	is_unlocked_test(i_pMutex);
 	g_bWorking = false;
 }
 
@@ -256,6 +291,146 @@ void read_then_write(xstdtsl::read_write_mutex * i_pMutex)
 	g_bWorking = false;
 }
 
+///
+/// aquires write lock, then tries to acquire another read and another write lock; both should fail
+///
+
+void try_write_until_blocking(xstdtsl::read_write_mutex * i_pMutex, const std::chrono::steady_clock::time_point & i_tTime)
+{
+	assert (i_pMutex != nullptr);
+	assert (std::chrono::steady_clock::now() < i_tTime);
+
+	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex blocks for a designated time using try_write_lock_until " << std::endl;
+	// aquire the write lock
+	i_pMutex->write_lock();
+	// confirm write lock
+	is_only_write_locked(i_pMutex);
+	// try to lock for writing -- should fail and block until the designated time
+	assert(!i_pMutex->try_write_lock_until(i_tTime));
+	// confirm write lock
+	is_only_write_locked(i_pMutex);
+	// unlock
+	i_pMutex->write_unlock();
+	/// test to ensure lock correctly released
+	is_unlocked_test(i_pMutex);
+	g_bWorking = false;
+}
+
+void try_write_for_blocking(xstdtsl::read_write_mutex * i_pMutex, const std::chrono::milliseconds & i_tTime)
+{
+	assert (i_pMutex != nullptr);
+
+	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex blocks for a designated time using try_write_lock_for " << std::endl;
+	// aquire the write lock
+	i_pMutex->write_lock();
+	// confirm write lock
+	is_only_write_locked(i_pMutex);
+	// try to lock for writing -- should fail and block until the designated time
+	assert(!i_pMutex->try_write_lock_for(i_tTime));
+	// confirm write lock
+	is_only_write_locked(i_pMutex);
+	// unlock
+	i_pMutex->write_unlock();
+	/// test to ensure lock correctly released
+	is_unlocked_test(i_pMutex);
+	g_bWorking = false;
+}
+
+void try_read_until_blocking(xstdtsl::read_write_mutex * i_pMutex, const std::chrono::steady_clock::time_point & i_tTime)
+{
+	assert (i_pMutex != nullptr);
+	assert (std::chrono::steady_clock::now() < i_tTime);
+
+	g_bWorking = true;
+	i_pMutex->set_lock_status(-2);
+	std::cout << "checking to ensure read_write_mutex blocks for a designated time using try_read_lock_until " << std::endl;
+	// try to lock for writing -- should fail and block until the designated time
+	assert(!i_pMutex->try_read_lock_until(i_tTime));
+	g_bWorking = false;
+}
+void try_read_for_blocking(xstdtsl::read_write_mutex * i_pMutex, const std::chrono::milliseconds & i_tTime)
+{
+	assert (i_pMutex != nullptr);
+
+	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex blocks for a designated time using try_read_lock_for " << std::endl;
+	i_pMutex->set_lock_status(-2);
+	// try to lock for writing -- should fail and block until the designated time
+	assert(!i_pMutex->try_read_lock_for(i_tTime));
+	g_bWorking = false;
+}
+
+
+void try_read_until_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+
+	g_bWorking = true;
+	i_pMutex->set_lock_status(0);
+	std::cout << "checking to ensure read_write_mutex blocks for a designated time using try_read_lock_until " << std::endl;
+	std::chrono::steady_clock::time_point tEnd = std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
+	// try to lock for writing -- should fail and block until the designated time
+	assert(i_pMutex->try_read_lock_until(tEnd));
+	// confirm read lock
+	is_only_read_locked(i_pMutex);
+	i_pMutex->set_lock_status(0);
+
+	g_bWorking = false;
+}
+void try_read_for_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+	std::chrono::milliseconds cTime(50);
+
+	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex doesnt block for a designated time using try_read_lock_for " << std::endl;
+	i_pMutex->set_lock_status(0);
+	// try to lock for reading -- should succeed and not block
+	assert(i_pMutex->try_read_lock_for(cTime));
+	// confirm read lock
+	is_only_read_locked(i_pMutex);
+	// try to lock for reading -- should succeed and not block
+	assert(i_pMutex->try_read_lock_for(cTime));
+	// confirm read lock
+	is_only_read_locked(i_pMutex);
+	i_pMutex->set_lock_status(0);
+	g_bWorking = false;
+}
+
+void try_write_until_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+
+	g_bWorking = true;
+	i_pMutex->set_lock_status(0);
+	std::cout << "checking to ensure read_write_mutex blocks for a designated time using try_write_lock_until " << std::endl;
+	std::chrono::steady_clock::time_point tEnd = std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
+	// try to lock for writing -- should fail and block until the designated time
+	assert(i_pMutex->try_write_lock_until(tEnd));
+	// confirm read lock
+	is_only_write_locked(i_pMutex);
+	i_pMutex->set_lock_status(0);
+
+	g_bWorking = false;
+}
+void try_write_for_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+	std::chrono::milliseconds cTime(50);
+
+	g_bWorking = true;
+	std::cout << "checking to ensure read_write_mutex doesnt block for a designated time using try_write_lock_for " << std::endl;
+	i_pMutex->set_lock_status(0);
+	// try to lock for writing -- should fail and block until the designated time
+	assert(i_pMutex->try_write_lock_for(cTime));
+	// confirm read lock
+	is_only_write_locked(i_pMutex);
+	i_pMutex->set_lock_status(0);
+	g_bWorking = false;
+}
+
 
 int main(int i_nNum_Params, char * i_pParams[])
 {
@@ -264,29 +439,48 @@ int main(int i_nNum_Params, char * i_pParams[])
 	// test to ensure the mutex is unlocked after the constructor
 	is_unlocked_test(&cMutex);
 	// test to ensure we can aquire read lock using read_lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
-	test_lock_thread_safe(read_lock,&cMutex,"read lock or read unlock blocked unnecessarily. terminating." );
+	test_lock_nonblocking(read_lock,&cMutex,"read lock or read unlock blocked unnecessarily. terminating." );
 	// test to ensure we can aquire read lock using try_read_lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
-	test_lock_thread_safe(try_read_lock,&cMutex,"try read lock or read unlock blocked unnecessarily. terminating." );
+	test_lock_nonblocking(try_read_lock,&cMutex,"try read lock or read unlock blocked unnecessarily. terminating." );
 	// test to ensure we can aquire read lock using try_read_lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
-	test_lock_thread_safe(two_read_lock,&cMutex,"2x read lock or read unlock blocked unnecessarily. terminating." );
+	test_lock_nonblocking(two_read_lock,&cMutex,"2x read lock or read unlock blocked unnecessarily. terminating." );
 	// test to ensure we can aquire read lock using try_read_lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
-//	test_lock_thread_safe(read_lock_limits,&cMutex,"maximum read lock or read unlock blocked unnecessarily. terminating.",1400000 );
+	test_lock_nonblocking(read_lock_limits,&cMutex,"maximum read lock or read unlock blocked unnecessarily. terminating." );
 	// test to ensure we can aquire write lock using write_lock  when unlocked. Use thread to ensure that if a block occurs that it will be broken
-	test_lock_thread_safe(write_lock,&cMutex,"write lock or write unlock blocked unnecessarily. terminating." );
+	test_lock_nonblocking(write_lock,&cMutex,"write lock or write unlock blocked unnecessarily. terminating." );
 	// test to ensure we can aquire write lock usng try_write_lock when unlocked. Use thread to ensure that if a block occurs that it will be broken
-	test_lock_thread_safe(try_write_lock,&cMutex,"try write lock or write unlock blocked unnecessarily. terminating." );
+	test_lock_nonblocking(try_write_lock,&cMutex,"try write lock or write unlock blocked unnecessarily. terminating." );
 	// test to ensure that read and write locks are unavailable after a write lock
-	test_lock_thread_safe(write_then_try,&cMutex,"write lock then try write lock or write unlock blocked unnecessarily. terminating." );
+	test_lock_nonblocking(write_then_try,&cMutex,"write lock then try write lock or write unlock blocked unnecessarily. terminating." );
+	// test to ensure that try_write_for aquires lock when unlocked
+	test_lock_nonblocking(try_write_for_nonblocking,&cMutex,"try_write_for blocked unnecessarily. terminating." );
+	// test to ensure that try_write_until aquires lock when unlocked
+	test_lock_nonblocking(try_write_until_nonblocking,&cMutex,"try_write_until blocked unnecessarily. terminating." );
+	// test to ensure that try_read_for aquires lock when unlocked
+	test_lock_nonblocking(try_read_for_nonblocking,&cMutex,"try_read_for blocked unnecessarily. terminating." );
+	// test to ensure that try_read_until aquires lock when unlocked
+	test_lock_nonblocking(try_read_until_nonblocking,&cMutex,"try_read_until blocked unnecessarily. terminating." );
 
 	// blocking tests
 	// aquire write then attempt another write
-	test_lock_blocking_thread(write_then_write,&cMutex);
+	test_lock_blocking(write_then_write,&cMutex);
 	// aquire write then attempt a read
-	test_lock_blocking_thread(write_then_read,&cMutex);
+	test_lock_blocking(write_then_read,&cMutex);
 	// aquire read then attempt a write
-	test_lock_blocking_thread(read_then_write,&cMutex);
+	test_lock_blocking(read_then_write,&cMutex);
 
-	//@@TODO: try ... until; try ... for
+
+	// aquire write when attempt a write until a given time
+	test_lock_blocking_until(try_write_until_blocking,&cMutex);
+	// aquire write when attempt a write until a given time
+	test_lock_blocking_for(try_write_for_blocking,&cMutex);
+	// test read until blocking
+	test_lock_blocking_until(try_read_until_blocking,&cMutex);
+	// test read for blocking
+	test_lock_blocking_for(try_read_for_blocking,&cMutex);
+
+
+
 	//@@TODO: lock guard
 	//@@TODO: dual_read, dual_write, dual_read_write	
 
