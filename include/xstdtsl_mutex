@@ -1,24 +1,10 @@
 #pragma once
+#if __cplusplus >= 201103L
 #include <chrono>
 #include <thread>
+#endif
 
-typedef void * xstdtsl_rwm_t;
-extern "C"
-{
-	xstdtsl_rwm_t	xstdtsl_rwm_new_read_write_mutex(void);
-	bool	xstdtsl_rwm_is_read_locked(xstdtsl_rwm_t);
-	bool	xstdtsl_rwm_is_write_locked(xstdtsl_rwm_t);
-	bool	xstdtsl_rwm_is_unlocked(xstdtsl_rwm_t);
-	int		xstdtsl_rwm_lock_status(xstdtsl_rwm_t);
-	void	xstdtsl_rwm_read_lock(xstdtsl_rwm_t);
-	void	xstdtsl_rwm_write_lock(xstdtsl_rwm_t);
-	void	xstdtsl_rwm_read_unlock(xstdtsl_rwm_t);
-	void	xstdtsl_rwm_write_unlock(xstdtsl_rwm_t);
-	bool	xstdtsl_rwm_try_read_lock(xstdtsl_rwm_t);
-	bool	xstdtsl_rwm_try_write_lock(xstdtsl_rwm_t);
-	void	xstdtsl_rwm_delete_read_write_mutex(xstdtsl_rwm_t &);
-	void	xstdtsl_rwm_set_status(xstdtsl_rwm_t, int);
-}
+#include <xstdtsl_mutex_C.h>
 
 namespace xstdtsl
 {
@@ -149,6 +135,7 @@ namespace xstdtsl
 		{
 			xstdtsl_rwm_write_unlock(m_cRW_Mutex);
 		}
+#if __cplusplus >= 201103L
 		///
 		/// attemps to obtain a read lock for a fixed duration; blocking for the duration
 		/// \returns true if a read lock is obtained; false otherwise
@@ -208,6 +195,7 @@ namespace xstdtsl
 			}
 			return bRet;
 		}
+#endif
 	};
 
 
