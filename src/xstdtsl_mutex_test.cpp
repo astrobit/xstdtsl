@@ -198,7 +198,7 @@ void read_lock_limits(xstdtsl::read_write_mutex * i_pMutex)
 	is_only_read_locked(i_pMutex);
 	std::cout << "test read lock value" << std::endl;
 	assert(i_pMutex->get_lock_status() == nMin);
-	std::cout << "test try write at negative rollover (should fail)" << std::endl;
+	std::cout << "test try write at positive rollover (should fail)" << std::endl;
 	i_pMutex->set_lock_status(nMax);
 	assert (!i_pMutex->try_write_lock());
 	is_only_read_locked(i_pMutex);
@@ -431,6 +431,84 @@ void try_write_for_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
 	g_bWorking = false;
 }
 
+void read_lock_guard_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+	g_bWorking = true;
+	std::cout << "checking to ensure read_lock_guard locks performs a single read lock  then releases lock when out of scope" << std::endl;
+	i_pMutex->set_lock_status(0);
+	{
+		xstdtsl::read_lock_guard cLock(*i_pMutex);
+		// confirm read lock
+		is_only_read_locked(i_pMutex);
+		assert (i_pMutex->get_lock_status() == 1);
+	}
+	std::cout << "out of scope of lock guard; ensure unlocked" << std::endl;
+	is_unlocked_test(i_pMutex);
+	g_bWorking = false;
+}
+
+void read_lock_guard_exception_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+	std::cout << "checking to ensure read_lock_guard locks performs a single read lock and releases lock when an exception occurs " << std::endl;
+	g_bWorking = true;
+	i_pMutex->set_lock_status(0);
+	try
+	{
+		xstdtsl::read_lock_guard cLock(*i_pMutex);
+		// confirm read lock
+		is_only_read_locked(i_pMutex);
+		assert (i_pMutex->get_lock_status() == 1);
+		throw 1;
+	}
+	catch (int i_iExc)
+	{
+		std::cout << "caught exception" << std::endl;
+		if (i_iExc != 1) // some other exception occurred
+			throw 1;
+	}
+	is_unlocked_test(i_pMutex);
+	g_bWorking = false;
+}
+void write_lock_guard_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+	g_bWorking = true;
+	std::cout << "checking to ensure write_lock_guard locks performs a single write lock  then releases lock when out of scope" << std::endl;
+	i_pMutex->set_lock_status(0);
+	{
+		xstdtsl::write_lock_guard cLock(*i_pMutex);
+		// confirm read lock
+		is_only_write_locked(i_pMutex);
+	}
+	std::cout << "out of scope of lock guard; ensure unlocked" << std::endl;
+	is_unlocked_test(i_pMutex);
+	g_bWorking = false;
+}
+
+void write_lock_guard_exception_nonblocking(xstdtsl::read_write_mutex * i_pMutex)
+{
+	assert (i_pMutex != nullptr);
+	std::cout << "checking to ensure write_lock_guard locks performs a single write lock and releases lock when an exception occurs " << std::endl;
+	g_bWorking = true;
+	i_pMutex->set_lock_status(0);
+	try
+	{
+		xstdtsl::write_lock_guard cLock(*i_pMutex);
+		// confirm read lock
+		is_only_write_locked(i_pMutex);
+		throw 1;
+	}
+	catch (int i_iExc)
+	{
+		std::cout << "caught exception" << std::endl;
+		if (i_iExc != 1) // some other exception occurred
+			throw 1;
+	}
+	is_unlocked_test(i_pMutex);
+	g_bWorking = false;
+}
 
 int main(int i_nNum_Params, char * i_pParams[])
 {
@@ -481,7 +559,15 @@ int main(int i_nNum_Params, char * i_pParams[])
 
 
 
-	//@@TODO: lock guard
+	// test to ensure that read_lock_guard aquires a read lock then releases when out of scope
+	test_lock_nonblocking(read_lock_guard_nonblocking,&cMutex,"read_lock_guard blocked unnecessarily. terminating." );
+	// test to ensure that read_lock_guard aquires a read lock then releases when out of scope when an exception occurs
+	test_lock_nonblocking(read_lock_guard_exception_nonblocking,&cMutex,"read_lock_guard blocked unnecessarily when there was an exception. terminating." );
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope
+	test_lock_nonblocking(write_lock_guard_nonblocking,&cMutex,"write_lock_guard blocked unnecessarily. terminating." );
+	// test to ensure that write_lock_guard aquires a read lock then releases when out of scope when an exception occurs
+	test_lock_nonblocking(write_lock_guard_exception_nonblocking,&cMutex,"write_lock_guard blocked unnecessarily when there was an exception. terminating." );
+
 	//@@TODO: dual_read, dual_write, dual_read_write	
 
 	return 0;	
