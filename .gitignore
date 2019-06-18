@@ -30,7 +30,7 @@
 *.exe
 *.out
 *.app
-./xstdtsl_mutex_test
+xstdtsl_mutex_test_exe
 
 #Visual Studio
 *.suo
