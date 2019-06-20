@@ -39,7 +39,8 @@ private:
 	size_t				m_nType_Size;
 	size_t				m_nBlock_Allocation_Size;
 //	optimization_hint	m_eOptimization;
-	std::mutex			m_mtx;
+//	std::mutex			m_mtx;
+	read_write_mutex	m_mMutex;
 	allocator			m_fnAllocator;
 	deleter				m_fndeleter;
 
