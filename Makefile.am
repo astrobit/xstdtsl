@@ -13,7 +13,7 @@ xstdtsl_vector_test_exe_SOURCES = src/xstdtsl_vector_test.cpp src/xstdtsl_vector
 xstdtsl_vector_test_exe_CFLAGS = --std=c++17 -pthread
 xstdtsl_vector_test_exe_LDFLAGS = -lpthread -lxstdtsl
 
-include_HEADERS = include/xstdtsl_mutex include/xstdtsl_system_C.h include/xstdtsl_mutex_C.h include/xstdtsl_vector
+include_HEADERS = include/xstdtsl_mutex include/xstdtsl_system_C.h include/xstdtsl_mutex_C.h include/xstdtsl_safe_vector
 noinst_HEADERS = include/xstdtsl_mutex_internal.hpp
 
 # Install the pkg-config file; the directory is set using
@@ -22,4 +22,4 @@ pkgconfig_DATA = ${PACKAGE_NAME}-${API_VERSION}.pc
 
 EXTRA_DIST = LICENSE README.md ${PACKAGE_NAME}-${API_VERSION}.pc
 CLEANFILES = ${PACKAGE_NAME}-${API_VERSION}.pc
-TESTS = xstdtsl_mutex_test_exe
+TESTS = xstdtsl_mutex_test_exe xstdtsl_vector_test_exe
