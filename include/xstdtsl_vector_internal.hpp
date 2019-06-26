@@ -1,3 +1,6 @@
+#include <xstdtsl_mutex>
+#include <xstdtsl_system_C.h>
+
 namespace xstdtsl_internal
 {
 	///
@@ -5,14 +8,14 @@ namespace xstdtsl_internal
 	///
 	template <class T> class safe_vector
 	{
-	private:
+	protected:
 		mutable read_write_mutex 	m_mMutex; ///< mutex for control of data contents
 		T * 				m_pData; ///< pointer to data block
 		T * 				m_pPointer_To_End; ///< pointer to end of data block (for convenience)
 		size_t 				m_nSize; ///< current size of data (number of objects of type T)
 		size_t				m_nCapacity; ///< current allocated space in the data block in terms of the number of objects of type T
 		size_t				m_nBlock_Allocation_Size; ///< minimum block size to be allocated to ensure 8-byte alignment
-	private:
+	protected:
 		///
 		size_t nl_copy_nondestruct(T * i_pSource, size_t i_nSize, T * i_pDest, size_t i_nCapacity) noexcept(noexcept(T(const T&)))
 		{
@@ -158,6 +161,88 @@ namespace xstdtsl_internal
 			nl_sizing();
 		}
 
+		///
+		/// place a new member at the back of the vector. if the new size exceeds capacity a reallocate will be performed. a blocking write lock will be attempted
+		///
+		void nl_push_back(
+			const T &i_tT ///< the new data to emplace at the back of the vector
+			) noexcept(noexcept(T)) // don't know if t is 
+		{
+			if (m_nCapacity < (m_nSize + 1))
+				nl_realloc(m_nSize + 1);
+
+			new (m_pPointer_To_End) T (i_tT);
+			m_pPointer_To_End++;
+			m_nSize++;
+		}
+		///
+		/// retrieve data from within the vector
+		/// \returns the data at the selected location; if the location is invalid a type T constructed with the default constructor will be returned
+		///
+		T nl_load(size_t i_nIndex) const noexcept(false)
+		{
+			T tRet = T();
+			if (i_nIndex < m_nSize)
+				tRet = m_pData[i_nIndex];
+			return tRet;
+		}
+		///
+		/// store data within the vector at a given location if the location is within the existing vector. destructor will be called on existing data at the location
+		///
+		void nl_store(
+				size_t i_nIndex, ///< the location at which to store the data
+				const T& i_tT ///< the data to be stored
+				) noexcept
+		{
+			if (i_nIndex < m_nSize)
+			{
+				m_pData[i_nIndex].~T();
+				new (&m_pData[i_nIndex]) T (i_tT);
+			}
+		}
+		///
+		/// get the current size of the vector
+		/// \returns the current size of the vector
+		///
+		size_t nl_size(void) const noexcept
+		{
+			return m_nSize;
+		}
+
+		///
+		/// shrinks the capacity to minimize memory use; after shrink may still have larger capacity than size
+		///
+		void nl_shrink_to_fit(void) noexcept
+		{
+			nl_realloc(m_nSize);
+		}
+		///
+		/// test if the vector is empty
+		/// \returns true if the vector is empty; false otherwise
+		///
+		bool nl_empty(void) const  noexcept
+		{
+			return m_nSize == 0;
+		}
+		///
+		/// returns the current capacity of the vector
+		/// \returns the current capacity of the vector
+		///
+		size_t nl_capacity(void) const noexcept
+		{
+			return m_nCapacity;
+		}
+		///
+		/// expands the vector capacity if the requested capacity is larger than the existing capacity
+		///
+		void nl_reserve(
+			size_t i_nCapacity ///< the desired new capacity
+			) noexcept
+		{
+			if (i_nSize > m_nCapacity)
+				nl_realloc(i_nSize);
+		}
+
 	public:
 		///
 		/// place a new member at the back of the vector. if the new size exceeds capacity a reallocate will be performed. a blocking write lock will be attempted
@@ -167,12 +252,7 @@ namespace xstdtsl_internal
 			) noexcept(noexcept(T)) // don't know if t is 
 		{
 			write_lock_guard cLock(m_mMutex);
-			if (m_nCapacity < (m_nSize + 1))
-				nl_realloc(m_nSize + 1);
-
-			new (m_pPointer_To_End) T (i_tT);
-			m_pPointer_To_End++;
-			m_nSize++;
+			nl_push_back(i_tT);
 		}
 		///
 		/// reset vector to size 0; will call destructor on any existing contents; blocking (write)
@@ -188,11 +268,8 @@ namespace xstdtsl_internal
 		///
 		T load(size_t i_nIndex) const noexcept(false)
 		{
-			T tRet = T();
 			read_lock_guard cLock(m_mMutex);
-			if (i_nIndex < m_nSize)
-				tRet = m_pData[i_nIndex];
-			return tRet;
+			return nl_load();
 		}
 		///
 		/// store data within the vector at a given location if the location is within the existing vector. destructor will be called on existing data at the location; blocking (write)
@@ -203,11 +280,7 @@ namespace xstdtsl_internal
 				) noexcept
 		{
 			write_lock_guard cLock(m_mMutex);
-			if (i_nIndex < m_nSize)
-			{
-				m_pData[i_nIndex].~T();
-				new (&m_pData[i_nIndex]) T (i_tT);
-			}
+			nl_store(i_nIndex,i_tT);
 		}
 		///
 		/// get the current size of the vector; blocking (read)
@@ -216,7 +289,52 @@ namespace xstdtsl_internal
 		size_t size(void) const noexcept
 		{
 			read_lock_guard cLock(m_mMutex);
-			return m_nSize;
+			return nl_size();
+		}
+
+		///
+		/// shrinks the capacity to minimize memory use; after shrink may still have larger capacity than size; blocking (write)
+		///
+		void shrink_to_fit(void) noexcept
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_shrink_to_fit();
+		}
+		///
+		/// test if the vector is empty; blocking (read)
+		/// \returns true if the vector is empty; false otherwise
+		///
+		bool empty(void) const  noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_empty();
+		}
+		///
+		/// returns the current capacity of the vector; blocking (read)
+		/// \returns the current capacity of the vector
+		///
+		size_t capacity(void) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_capacity();
+		}
+		///
+		/// expands the vector capacity if the requested capacity is larger than the existing capacity
+		///
+		void reserve(
+			size_t i_nCapacity ///< the desired new capacity
+			) noexcept
+		{
+			write_lock_guard cLock(m_mMutex);
+			return nl_reserve(i_nCapacity);
+		}
+		///
+		/// returned the maximum possible capacity of the vector given memory limitations of the system
+		/// \returns the maximum possible capacity for the given type
+		///
+		size_t max_size(void) const noexcept
+		{
+			return (get_available_memory() / (m_nBlock_Allocation_Size * sizeof(T))) * m_nBlock_Allocation_Size;
 		}
 
 		///
@@ -271,54 +389,9 @@ namespace xstdtsl_internal
 			m_nSize = 0;
 			nl_nullify();
 		}
-		///
-		/// shrinks the capacity to minimize memory use; after shrink may still have larger capacity than size; blocking (write)
-		///
-		void shrink_to_fit(void) noexcept
-		{
-			write_lock_guard cLock(m_mMutex);
-			nl_realloc(m_nSize);
-		}
-		///
-		/// test if the vector is empty; blocking (read)
-		/// \returns true if the vector is empty; false otherwise
-		///
-		bool empty(void)  noexcept
-		{
-			read_lock_guard cLock(m_mMutex);
-			return m_nSize == 0;
-		}
-		///
-		/// returns the current capacity of the vector; blocking (read)
-		/// \returns the current capacity of the vector
-		///
-		size_t capacity(void) noexcept
-		{
-			read_lock_guard cLock(m_mMutex);
-			return m_nCapacity;
-		}
-		///
-		/// expands the vector capacity if the requested capacity is larger than the existing capacity
-		///
-		void reserve(
-			size_t i_nCapacity ///< the desired new capacity
-			) noexcept
-		{
-			write_lock_guard cLock(m_mMutex);
-			if (i_nSize > m_nCapacity)
-				nl_realloc(i_nSize);
-		}
-		///
-		/// returned the maximum possible capacity of the vector given memory limitations of the system
-		/// \returns the maximum possible capacity for the given type
-		///
-		size_t max_size(void) noexcept
-		{
-			return (get_max_memory() / (m_nBlock_Allocation_Size * sizeof(T))) * m_nBlock_Allocation_Size;
-		}
 			
 
-		class base_iterator
+		class iterator_base
 		{
 		private:
 			bool m_bLock_Type_Write; // type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
@@ -333,11 +406,11 @@ namespace xstdtsl_internal
 			const safe_vector<T> & m_cVector; ///< the vector that is being iterated over
 			const T * m_pCursor; ///< a cursor pointing to the current data location within the vector
 		public:
-			base_iterator(void) = delete;
+			iterator_base(void) = delete;
 			///
 			/// constructor that initializes the iterator and aquires a read lock on the vector
 			///
-			base_iterator(
+			iterator_base(
 				const safe_vector<T> & i_cVector, ///< the vector to iterate over
 				start_point i_eStart_Point, ///< the starting point to use within the vector (beginning or end)
 				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
@@ -359,7 +432,7 @@ namespace xstdtsl_internal
 			///
 			/// copy constructor (deleted)
 			///
-			base_iterator(const base_iterator & i_cIterator)  = delete;
+			iterator_base(const iterator_base & i_cIterator)  = delete;
 			///
 			/// destructor: releases lock
 			///
@@ -374,7 +447,7 @@ namespace xstdtsl_internal
 			/// pre-increment operator; advances the iterator within the vector; will not advance past the end of the vector
 			/// \returns a reference to this iterator
 			///
-			virtual base_iterator & operator ++ (void) noexcept
+			virtual iterator_base & operator ++ (void) noexcept
 			{
 				if (m_pCursor < m_cVector.m_pPointer_To_End)
 					m_pCursor++;
@@ -384,11 +457,11 @@ namespace xstdtsl_internal
 			/// post-increment operator; advances the iterator within the vector; will not advance past the end of the vector
 			/// \returns an iterator reflecting the state prior to increment
 			///
-			virtual base_iterator operator ++ (
+			virtual iterator_base operator ++ (
 				int i_iValue ///< ignored
 				) noexcept
 			{
-				base_iterator cRet(*this);
+				iterator_base cRet(*this);
 				if (m_pCursor < m_cVector.m_pPointer_To_End)
 					m_pCursor++;
 				return cRet;
@@ -397,7 +470,7 @@ namespace xstdtsl_internal
 			/// pre-decrement operator; rewinds the iterator within the vector; will not rewind past the start of the vector
 			/// \returns a reference to this iterator
 			///
-			virtual base_iterator & operator -- (void) noexcept
+			virtual iterator_base & operator -- (void) noexcept
 			{
 				if (m_pCursor >= m_cVector.m_pData)
 					m_pCursor--;
@@ -407,11 +480,11 @@ namespace xstdtsl_internal
 			/// post-decrement operator; rewinds the iterator within the vector; will not rewind past the start of the vector
 			/// \returns an iterator reflecting the state prior to decrement
 			///
-			virtual base_iterator operator -- (
+			virtual iterator_base operator -- (
 				int i_nValue ///< ignored
 				) noexcept
 			{
-				base_iterator cRet(*this);
+				iterator_base cRet(*this);
 				if (m_pCursor >= m_cVector.m_pData)
 					m_pCursor--;
 				return cRet;
@@ -420,7 +493,7 @@ namespace xstdtsl_internal
 			/// add-assign operator; advances the iterator within the vector; will not advance past the end of the vector or prior to the start of the data
 			/// \returns a reference to this iterator
 			///
-			virtual base_iterator & operator += (int i_nValue) noexcept
+			virtual iterator_base & operator += (int i_nValue) noexcept
 			{
 				m_pCursor += i_nValue;
 				if (m_pCursor > m_cVector.m_pPointer_To_End)
@@ -433,7 +506,7 @@ namespace xstdtsl_internal
 			/// subtract-assign operator; advances the iterator within the vector; will not advance past the end of the vector or prior to the start of the data
 			/// \returns a reference to this iterator
 			///
-			virtual base_iterator & operator -= (int i_nValue) noexcept
+			virtual iterator_base & operator -= (int i_nValue) noexcept
 			{
 				m_pCursor -= i_nValue;
 				if (m_pCursor > m_cVector.m_pPointer_To_End)
@@ -490,7 +563,7 @@ namespace xstdtsl_internal
 		///
 		/// class for iterating through a vector; unlike typical iterators this class is scoped and holds a read lock on the vector to ensure that the vector does not change data or size during iteration
 		///
-		class read_iterator : public base_iterator
+		class read_iterator : public iterator_base
 		{
 		public:
 			///
@@ -503,7 +576,7 @@ namespace xstdtsl_internal
 			read_iterator(
 				const safe_vector<T> & i_cVector, ///< the vector to iterate over
 				start_point i_eStart_Point ///< the starting point to use within the vector (beginning or end)
-				)  noexcept : base_iterator(i_cVector,i_eStart_Point,false)
+				)  noexcept : iterator_base(i_cVector,i_eStart_Point,false)
 			{
 			}
 			///
@@ -511,7 +584,7 @@ namespace xstdtsl_internal
 			///
 			read_iterator(
 				const read_iterator & i_cIterator ///< the iterator to copy
-				)  noexcept : base_iterator(i_cVector,base_iterator::start_point::beginning,false)
+				)  noexcept : iterator_base(i_cVector,iterator_base::start_point::beginning,false)
 			{
 				m_pCursor = i_cIterator.m_pCursor;
 			}
@@ -530,7 +603,7 @@ namespace xstdtsl_internal
 			}
 		};
 
-		class write_iterator : public base_iterator
+		class write_iterator : public iterator_base
 		{
 
 		public:
@@ -541,7 +614,7 @@ namespace xstdtsl_internal
 			///
 			/// constructor that initializes the iterator and aquires a read lock on the vector; blocking (write)
 			///
-			write_iterator(const safe_vector<T> & i_cVector, start_point i_eStart_Point)  noexcept : base_iterator(i_cVector,i_eStart_Point,true)
+			write_iterator(const safe_vector<T> & i_cVector, start_point i_eStart_Point)  noexcept : iterator_base(i_cVector,i_eStart_Point,true)
 			{
 			}
 
@@ -571,13 +644,99 @@ namespace xstdtsl_internal
 			}
 		};
 
+		class control_base
+		{
+		private:
+			bool m_bLock_Type_Write; // type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
+		protected:
+			safe_vector<T> & m_cVector; ///< reference to the vector to control
+		public:
+			///
+			/// default contructor (deleted)
+			///
+			control_base(void) = delete;
+			///
+			/// contructor: tie the read control to a particular vector and lock the vector for read; blocking
+			///
+			control_base(
+				const safe_vector<T> & i_cVector, ///< the vector to be accessed
+				bool i_bLock_Type_Write ///< flag to indicate the type of lock control to assume
+				)  noexcept: m_cVector(i_cVector)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				if (m_bLock_Type_Write)
+					m_cVector.m_cMutex.write_lock();
+				else
+					m_cVector.m_cMutex.read_lock();
+
+			}
+			///
+			/// copy contructor (deleted)
+			///
+			control_base(const control_base & i_cIterator)   = delete;
+			///
+			/// destructor: release read lock 
+			///
+			~control_base(void) noexcept
+			{
+				if (m_bLock_Type_Write)
+					m_cVector.m_cMutex.write_unlock();
+				else
+					m_cVector.m_cMutex.read_unlock();
+			}
+			///
+			/// assignment / copy operator (deleted)
+			///
+			control_base & operator = (const control_base & i_cIterator) = delete;
+			///
+			/// test if the vector is empty
+			/// \returns true if the vector is empty; false otherwise
+			///
+			bool empty(void)  noexcept
+			{
+				return m_cVector.nl_empty();
+			}
+			///
+			/// returns the current size of the vector
+			/// \returns the size of the vector; 0 if empty
+			///
+			size_t size(void) const noexcept
+			{
+				return m_cVector.nl_size();
+			}
+			///
+			/// returns the current capacity of the vector
+			/// \returns the current capacity of the vector
+			///
+			virtual size_t capacity(void) noexcept
+			{
+				return m_cVector.nl_capacity();
+			}
+
+			///
+			/// returns the maximum capacity of the vector
+			///
+			virtual size_t max_size(void) const noexcept
+			{
+				return m_cVector.max_size();
+			}
+			///
+			/// retrieve data from within the vector
+			/// \returns the data at the selected location; if the location is invalid a type T constructed with the default constructor will be returned
+			///
+			virtual T load(
+					size_t i_nIndex ///< the location within the vector at which to retrieve the data
+					) const noexcept(false) // don't know if T() throws an exception
+			{
+				return m_cVector.nl_load(i_nIndex);
+			}
+		};	
+
 		///
 		/// the read control class is designed to allow scoped read access to the vector that maintains a read lock throughout the scope. This is usefl when many random acess reads occur
 		///
-		class read_control
+		class read_control : public control_base
 		{
-		private:
-			safe_vector<T> & m_cVector; ///< reference to the vector to control
 		public:
 			///
 			/// default contructor (deleted)
@@ -588,63 +747,80 @@ namespace xstdtsl_internal
 			///
 			read_control(
 				const safe_vector<T> & i_cVector ///< the vector to be accessed
-				)  noexcept: m_cVector(i_cVector)
+				)  noexcept: control_base(i_cVector,false)
 			{
-				m_cVector.m_cMutex.read_lock();
 			}
 			///
 			/// copy contructor (deleted)
 			///
 			read_control(const read_iterator & i_cIterator)   = delete;
 			///
-			/// destructor: release read lock 
-			///
-			~read_control(void) noexcept
-			{
-				m_cVector.m_cMutex.read_unlock();
-			}
-			///
 			/// assignment / copy operator (deleted)
 			///
 			read_control & operator = (const read_iterator & i_cIterator) = delete;
+		};		
+
+		///
+		/// the read control class is designed to allow scoped read access to the vector that maintains a read lock throughout the scope. This is usefl when many random acess reads occur
+		///
+		class write_control : public control_base
+		{
+		public:
 			///
-			/// test if the vector is empty
-			/// \returns true if the vector is empty; false otherwise
+			/// default contructor (deleted)
 			///
-			bool empty(void)  noexcept
+			write_control(void) = delete;
+			///
+			/// contructor: tie the read control to a particular vector and lock the vector for read; blocking
+			///
+			write_control(
+				const safe_vector<T> & i_cVector ///< the vector to be accessed
+				)  noexcept: control_base(i_cVector,true)
 			{
-				return m_cVector.m_nSize == 0;
 			}
 			///
-			/// returns the current size of the vector
-			/// \returns the size of the vector; 0 if empty
+			/// copy contructor (deleted)
 			///
-			size_t size(void) noexcept
+			write_control(const write_control & i_cIterator)   = delete;
+			///
+			/// assignment / copy operator (deleted)
+			///
+			write_control & operator = (const write_control & i_cIterator) = delete;
+			///
+			/// store the value at the current location of the iterator; if the iterator is not pointing to valid data the request will be ignored
+			///
+			void store(
+				size_t i_nIndex, ///< the location at which to store the data
+				const T& i_tT ///< the data to be stored
+				) noexcept
 			{
-				return m_cVector.m_nSize;
+				m_cVector.nl_store(i_nIndex,i_tT);
 			}
 			///
-			/// returns the current capacity of the vector
-			/// \returns the current capacity of the vector
+			/// store the value at the current location of the iterator; if the iterator is not pointing to valid data the request will be ignored
 			///
-			size_t capacity(void) noexcept
+			void push_back(const T &i_tT) noexcept
 			{
-				return m_cVector.m_nCapacity;
+				m_cVector.nl_push_back(i_tT);
 			}
 			///
-			/// retrieve data from within the vector
-			/// \returns the data at the selected location; if the location is invalid a type T constructed with the default constructor will be returned
+			/// expands the vector capacity if the requested capacity is larger than the existing capacity
 			///
-			T load(
-					size_t i_nIndex ///< the location within the vector at which to retrieve the data
-					) const noexcept
+			void reserve(
+				size_t i_nCapacity ///< the desired new capacity
+				) noexcept
 			{
-				T tRet = T();
-				if (i_nIndex < m_nSize)
-					tRet = m_pData[i_nIndex];
-				return tRet;
+				m_cVector.nl_reserve(i_nCapacity);
 			}
 
-		};			
+			///
+			/// shrinks the capacity to minimize memory use; after shrink may still have larger capacity than size
+			///
+			void shrink_to_fit(void)
+			{
+				m_cVector.nl_shrink_to_fit();
+			}
+
+		};		
 	};
 }
