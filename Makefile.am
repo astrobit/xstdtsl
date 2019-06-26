@@ -14,7 +14,7 @@ xstdtsl_vector_test_exe_CFLAGS = --std=c++17 -pthread
 xstdtsl_vector_test_exe_LDFLAGS = -lpthread -lxstdtsl
 
 include_HEADERS = include/xstdtsl_mutex include/xstdtsl_system_C.h include/xstdtsl_mutex_C.h include/xstdtsl_vector
-noinst_HEADERS = include/xstdtsl_mutex_internal.h
+noinst_HEADERS = include/xstdtsl_mutex_internal.hpp
 
 # Install the pkg-config file; the directory is set using
 # PKG_INSTALLDIR in configure.ac.
