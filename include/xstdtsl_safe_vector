@@ -4,6 +4,7 @@
 
 #include <xstdtsl_mutex>
 #include <xstdtsl_system_C.h>
+#include <iostream>
 
 namespace xstdtsl
 {
@@ -71,11 +72,16 @@ namespace xstdtsl
 				size_t i_nNew_Size ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
 				) noexcept(false) // don't know if T constructor or destructor throws exceptions
 		{
+			std::cout << "realloc_copy (sizes): " << i_nNew_Size << " " << m_nBlock_Allocation_Size << std::endl;
 			size_t nAlloc_Size = i_nNew_Size / m_nBlock_Allocation_Size;
-			if ((i_nNew_Size % m_nBlock_Allocation_Size) == 0)
+			std::cout << "realloc_copy (alloc size:1): " << nAlloc_Size << std::endl;
+			if ((i_nNew_Size % m_nBlock_Allocation_Size) != 0)
 				nAlloc_Size++;
+			std::cout << "realloc_copy (alloc size:2): " << nAlloc_Size << std::endl;
 			nAlloc_Size *= m_nBlock_Allocation_Size;
+			std::cout << "realloc_copy (alloc size:3): " << nAlloc_Size << std::endl;
 			m_nCapacity = nAlloc_Size;
+			std::cout << "realloc_copy: " << m_nCapacity << std::endl;
 			T * pNew = reinterpret_cast<T*>(std::malloc(sizeof(T) * nAlloc_Size));
 			if (m_pData != nullptr)
 			{
@@ -93,14 +99,15 @@ namespace xstdtsl
 				) noexcept(false) // don't know if T constructor or destructor throws exceptions
 		{
 			size_t nAlloc_Size = i_nNew_Size / m_nBlock_Allocation_Size;
-			if ((i_nNew_Size % m_nBlock_Allocation_Size) == 0)
+			if ((i_nNew_Size % m_nBlock_Allocation_Size) != 0)
 				nAlloc_Size++;
 			nAlloc_Size *= m_nBlock_Allocation_Size;
 			m_nCapacity = nAlloc_Size;
+			std::cout << "nl_realloc_no_copy: " << m_nCapacity << std::endl;
 			T * pNew = reinterpret_cast<T*>(std::malloc(sizeof(T) * nAlloc_Size));
 			if (m_pData != nullptr)
 			{
-				nl_destroy(m_pData,m_nSize);
+				nl_destruct_contents(m_pData,m_nSize);
 				m_nSize = 0;
 				std::free(m_pData);
 			}
@@ -272,7 +279,7 @@ namespace xstdtsl
 		T load(size_t i_nIndex) const noexcept(false)
 		{
 			read_lock_guard cLock(m_mMutex);
-			return nl_load();
+			return nl_load(i_nIndex);
 		}
 		///
 		/// store data within the vector at a given location if the location is within the existing vector. destructor will be called on existing data at the location; blocking (write)
@@ -388,7 +395,8 @@ namespace xstdtsl
 		~safe_vector(void) noexcept
 		{
 			write_lock_guard cLock(m_mMutex);
-			nl_destroy(m_pData,m_nSize,true);
+			nl_destruct_contents(m_pData,m_nSize);
+			std::free(m_pData);
 			m_nSize = 0;
 			nl_nullify();
 		}
