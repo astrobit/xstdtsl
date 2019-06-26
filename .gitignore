@@ -31,6 +31,7 @@
 *.out
 *.app
 xstdtsl_mutex_test_exe
+xstdtsl_vector_test_exe
 
 #Visual Studio
 *.suo
