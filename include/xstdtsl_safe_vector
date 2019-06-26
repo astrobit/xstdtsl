@@ -1,7 +1,11 @@
+#pragma once
+#ifndef __XSTDTSL_SAFE_VECTOR_H
+#define __XSTDTSL_SAFE_VECTOR_H
+
 #include <xstdtsl_mutex>
 #include <xstdtsl_system_C.h>
 
-namespace xstdtsl_internal
+namespace xstdtsl
 {
 	///
 	/// vector type that is safe for crossing library boundaries and is thread safe; similar to a cross between std::atomic and std::vector; more restrictive on access to data than is std::vector. read and write iterators lock access to the data and capacity to change the vector. multiple read operations may occur simultaneously, but write operations or operations that modify the contents or size of the vector are atomic.
@@ -17,7 +21,7 @@ namespace xstdtsl_internal
 		size_t				m_nBlock_Allocation_Size; ///< minimum block size to be allocated to ensure 8-byte alignment
 	protected:
 		///
-		size_t nl_copy_nondestruct(T * i_pSource, size_t i_nSize, T * i_pDest, size_t i_nCapacity) noexcept(noexcept(T(const T&)))
+		size_t nl_copy_nondestruct(T * i_pSource, size_t i_nSize, T * i_pDest, size_t i_nCapacity) noexcept(false)
 		{
 			size_t nCopy_Size = 0;
 			if (i_pSource != nullptr && i_pDest != nullptr)
@@ -33,7 +37,7 @@ namespace xstdtsl_internal
 			}
 			return nCopy_Size;
 		}
-		size_t nl_copy_destruct(T * i_pSource, size_t i_nSize, T * i_pDest, size_t i_nCapacity) noexcept(noexcept(T(const T&)) && noexcept(~T()))
+		size_t nl_copy_destruct(T * i_pSource, size_t i_nSize, T * i_pDest, size_t i_nCapacity) noexcept(false)
 		{
 			size_t nCopy_Size = 0;
 			if (i_pSource != nullptr && i_pDest != nullptr)
@@ -50,7 +54,7 @@ namespace xstdtsl_internal
 			}
 			return nCopy_Size;
 		}
-		void nl_destruct_contents(T * i_pData, size_t i_nSize) noexcept(noexcept(~T()) // don't know if ~T throws exceptions
+		void nl_destruct_contents(T * i_pData, size_t i_nSize) noexcept(false) // don't know if ~T throws exceptions
 		{
 			if (i_pData != nullptr)
 			{
@@ -64,7 +68,7 @@ namespace xstdtsl_internal
 		/// allocate or reallocate data block, copying old contents to the new data block if needed
 		///
 		void nl_realloc_copy(
-				size_t i_nNew_Size, ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
+				size_t i_nNew_Size ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
 				) noexcept(false) // don't know if T constructor or destructor throws exceptions
 		{
 			size_t nAlloc_Size = i_nNew_Size / m_nBlock_Allocation_Size;
@@ -85,7 +89,7 @@ namespace xstdtsl_internal
 		/// allocate or reallocate data block, copying old contents to the new data block if needed
 		///
 		void nl_realloc_no_copy(
-				size_t i_nNew_Size, ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
+				size_t i_nNew_Size ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
 				) noexcept(false) // don't know if T constructor or destructor throws exceptions
 		{
 			size_t nAlloc_Size = i_nNew_Size / m_nBlock_Allocation_Size;
@@ -117,8 +121,8 @@ namespace xstdtsl_internal
 		///
 		void nl_sizing(void) noexcept
 		{
-			m_nType_Size = sizeof(T);
-			switch (m_nType_Size)
+			size_t nType_Size = sizeof(T);
+			switch (nType_Size)
 			{
 			case 2:
 				m_nBlock_Allocation_Size = 4;
@@ -127,7 +131,7 @@ namespace xstdtsl_internal
 				m_nBlock_Allocation_Size = 2;
 				break;
 			default:
-				m_nBlock_Allocation_Size = 8 * m_nType_Size;
+				m_nBlock_Allocation_Size = 8 * nType_Size;
 				break;
 			}
 		}
@@ -140,7 +144,6 @@ namespace xstdtsl_internal
 		{
 			dual_read_write_lock cLock(i_cRHO.m_mMutex,m_mMutex);
 			nl_clear();
-			nl_realloc(i_cRHO.m_nSize);
 			m_nSize = nl_copy_nondestruct(i_cRHO.m_pData,i_cRHO.m_nSize,m_pData,m_nCapacity);
 		}
 		///
@@ -166,10 +169,10 @@ namespace xstdtsl_internal
 		///
 		void nl_push_back(
 			const T &i_tT ///< the new data to emplace at the back of the vector
-			) noexcept(noexcept(T)) // don't know if t is 
+			) noexcept(false) // don't know if t is 
 		{
 			if (m_nCapacity < (m_nSize + 1))
-				nl_realloc(m_nSize + 1);
+				nl_realloc_copy(m_nSize + 1);
 
 			new (m_pPointer_To_End) T (i_tT);
 			m_pPointer_To_End++;
@@ -214,7 +217,7 @@ namespace xstdtsl_internal
 		///
 		void nl_shrink_to_fit(void) noexcept
 		{
-			nl_realloc(m_nSize);
+			nl_realloc_copy(m_nSize);
 		}
 		///
 		/// test if the vector is empty
@@ -239,8 +242,8 @@ namespace xstdtsl_internal
 			size_t i_nCapacity ///< the desired new capacity
 			) noexcept
 		{
-			if (i_nSize > m_nCapacity)
-				nl_realloc(i_nSize);
+			if (i_nCapacity > m_nCapacity)
+				nl_realloc_copy(i_nCapacity);
 		}
 
 	public:
@@ -249,7 +252,7 @@ namespace xstdtsl_internal
 		///
 		void push_back(
 			const T &i_tT ///< the new data to emplace at the back of the vector
-			) noexcept(noexcept(T)) // don't know if t is 
+			) noexcept(false) // don't know if t is 
 		{
 			write_lock_guard cLock(m_mMutex);
 			nl_push_back(i_tT);
@@ -351,14 +354,14 @@ namespace xstdtsl_internal
 		///
 		safe_vector(void) noexcept
 		{
-			constructor_common();
+			nl_constructor_common();
 		}
 		///
 		/// copy constructor; copys data from one vector to another; blocking (read/write)
 		///
-		safe_vector(const safe_vector<T> i_cRHO) noexcept(false) // don't know if T(const T&) will cause exception
+		safe_vector(const safe_vector<T> &i_cRHO) noexcept(false) // don't know if T(const T&) will cause exception
 		{
-			constructor_common();
+			nl_constructor_common();
 			copy(i_cRHO);
 		}
 		///
@@ -368,7 +371,7 @@ namespace xstdtsl_internal
 			std::initializer_list<T> i_lT ///< the data to use to construct the vector
 			) noexcept
 		{
-			constructor_common();
+			nl_constructor_common();
 
 			write_lock_guard cLock(m_mMutex);
 			nl_realloc(i_lT.size());
@@ -398,7 +401,7 @@ namespace xstdtsl_internal
 		public:
 			/// 
 			/// enumeration to describe whether the iteration begins at the beginning or end of the vector
-			enum class start_point = {
+			enum start_point {
 					beginning, ///< iteration will begin at the start of the vector data
 					end ///< iteration will begin at the end of the vector data
 					};
@@ -436,7 +439,7 @@ namespace xstdtsl_internal
 			///
 			/// destructor: releases lock
 			///
-			virtual ~base_constructor(void)
+			virtual ~iterator_base(void)
 			{
 				if (m_bLock_Type_Write)
 					m_cVector.write_unlock();
@@ -519,7 +522,7 @@ namespace xstdtsl_internal
 			/// equality operator
 			/// \returns true if both iterators are pointing to the same vector and are pointing to the same location within the vector
 			///
-			virtual bool operator ==(const read_iterator & i_cRHO) noexcept
+			virtual bool operator ==(const iterator_base & i_cRHO) noexcept
 			{
 				return (m_cVector == i_cRHO.m_cVector && m_pCursor == i_cRHO.m_pCursor);
 			}
@@ -527,7 +530,7 @@ namespace xstdtsl_internal
 			/// inequality operator
 			/// \returns true if the iterators are not pointing to the same vector or are not pointing to the same location within one vector
 			///
-			virtual bool operator !=(const read_iterator & i_cRHO) noexcept
+			virtual bool operator !=(const iterator_base & i_cRHO) noexcept
 			{
 				return (m_cVector != i_cRHO.m_cVector || m_pCursor != i_cRHO.m_pCursor);
 			}
@@ -575,7 +578,7 @@ namespace xstdtsl_internal
 			///
 			read_iterator(
 				const safe_vector<T> & i_cVector, ///< the vector to iterate over
-				start_point i_eStart_Point ///< the starting point to use within the vector (beginning or end)
+				enum iterator_base::start_point i_eStart_Point ///< the starting point to use within the vector (beginning or end)
 				)  noexcept : iterator_base(i_cVector,i_eStart_Point,false)
 			{
 			}
@@ -584,9 +587,9 @@ namespace xstdtsl_internal
 			///
 			read_iterator(
 				const read_iterator & i_cIterator ///< the iterator to copy
-				)  noexcept : iterator_base(i_cVector,iterator_base::start_point::beginning,false)
+				)  noexcept : iterator_base(i_cIterator.m_cVector,iterator_base::start_point::beginning,false)
 			{
-				m_pCursor = i_cIterator.m_pCursor;
+				iterator_base::m_pCursor = i_cIterator.m_pCursor;
 			}
 			///
 			/// assignment operator; releases lock on existing vector and aquires a read lock on the vector that the right hand iterator refers to; blocking (read)
@@ -595,10 +598,10 @@ namespace xstdtsl_internal
 					const read_iterator & i_cIterator ///< the iterator to copy
 				) noexcept
 			{
-				m_cVector.m_cMutex.read_unlock();
-				m_cVector = i_cIterator.m_cVector;
-				m_cVector.m_cMutex.read_lock();
-				m_pCursor = i_cIterator.m_pCursor;
+				iterator_base::m_cVector.m_cMutex.read_unlock();
+				iterator_base::m_cVector = i_cIterator.m_cVector;
+				iterator_base::m_cVector.m_cMutex.read_lock();
+				iterator_base::m_pCursor = i_cIterator.m_pCursor;
 				return *this;
 			}
 		};
@@ -614,7 +617,7 @@ namespace xstdtsl_internal
 			///
 			/// constructor that initializes the iterator and aquires a read lock on the vector; blocking (write)
 			///
-			write_iterator(const safe_vector<T> & i_cVector, start_point i_eStart_Point)  noexcept : iterator_base(i_cVector,i_eStart_Point,true)
+			write_iterator(const safe_vector<T> & i_cVector, enum iterator_base::start_point i_eStart_Point)  noexcept : iterator_base(i_cVector,i_eStart_Point,true)
 			{
 			}
 
@@ -623,10 +626,8 @@ namespace xstdtsl_internal
 			///
 			write_iterator(
 				const write_iterator & i_cIterator ///< the iterator to copy
-				)  noexcept = delete
-			{
-				m_pCursor = i_cIterator.m_pCursor;
-			}
+				)  noexcept = delete;
+
 			///
 			/// assignment operator; deleted (due to requirement for multiple write locks); use write_control instead
 			///
@@ -639,8 +640,8 @@ namespace xstdtsl_internal
 			///
 			void store(T i_tT) noexcept
 			{
-				if (m_pCursor >= m_cVector.m_pData && m_pCursor < m_cVector.m_pPointer_To_End)
-					m_pCursor[0] = i_tT;
+				if (iterator_base::m_pCursor >= iterator_base::m_cVector.m_pData && iterator_base::m_pCursor < iterator_base::m_cVector.m_pPointer_To_End)
+					iterator_base::m_pCursor[0] = i_tT;
 			}
 		};
 
@@ -794,14 +795,14 @@ namespace xstdtsl_internal
 				const T& i_tT ///< the data to be stored
 				) noexcept
 			{
-				m_cVector.nl_store(i_nIndex,i_tT);
+				control_base::m_cVector.nl_store(i_nIndex,i_tT);
 			}
 			///
 			/// store the value at the current location of the iterator; if the iterator is not pointing to valid data the request will be ignored
 			///
 			void push_back(const T &i_tT) noexcept
 			{
-				m_cVector.nl_push_back(i_tT);
+				control_base::m_cVector.nl_push_back(i_tT);
 			}
 			///
 			/// expands the vector capacity if the requested capacity is larger than the existing capacity
@@ -810,7 +811,7 @@ namespace xstdtsl_internal
 				size_t i_nCapacity ///< the desired new capacity
 				) noexcept
 			{
-				m_cVector.nl_reserve(i_nCapacity);
+				control_base::m_cVector.nl_reserve(i_nCapacity);
 			}
 
 			///
@@ -818,9 +819,11 @@ namespace xstdtsl_internal
 			///
 			void shrink_to_fit(void)
 			{
-				m_cVector.nl_shrink_to_fit();
+				control_base::m_cVector.nl_shrink_to_fit();
 			}
 
 		};		
 	};
 }
+
+#endif // #ifdef __XSTDTSL_SAFE_VECTOR_H
