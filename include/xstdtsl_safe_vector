@@ -20,6 +20,20 @@ namespace xstdtsl
 		size_t 				m_nSize; ///< current size of data (number of objects of type T)
 		size_t				m_nCapacity; ///< current allocated space in the data block in terms of the number of objects of type T
 		size_t				m_nBlock_Allocation_Size; ///< minimum block size to be allocated to ensure 8-byte alignment
+	private:
+		T * nl_alloc(size_t &io_nSize)
+		{
+			T * pRet = nullptr;
+			size_t nAlloc_Size = io_nSize / m_nBlock_Allocation_Size;
+			std::cout << "realloc_copy (alloc size:1): " << nAlloc_Size << std::endl;
+			if ((io_nSize % m_nBlock_Allocation_Size) != 0)
+				nAlloc_Size++;
+			nAlloc_Size *= m_nBlock_Allocation_Size;
+			if (nAlloc_Size > 0)
+				pRet = reinterpret_cast<T*>(std::malloc(sizeof(T) * nAlloc_Size));
+			io_nSize = nAlloc_Size;
+			return pRet;
+		}
 	protected:
 		///
 		size_t nl_copy_nondestruct(T * i_pSource, size_t i_nSize, T * i_pDest, size_t i_nCapacity) noexcept(false)
@@ -72,24 +86,19 @@ namespace xstdtsl
 				size_t i_nNew_Size ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
 				) noexcept(false) // don't know if T constructor or destructor throws exceptions
 		{
-			std::cout << "realloc_copy (sizes): " << i_nNew_Size << " " << m_nBlock_Allocation_Size << std::endl;
-			size_t nAlloc_Size = i_nNew_Size / m_nBlock_Allocation_Size;
-			std::cout << "realloc_copy (alloc size:1): " << nAlloc_Size << std::endl;
-			if ((i_nNew_Size % m_nBlock_Allocation_Size) != 0)
-				nAlloc_Size++;
-			std::cout << "realloc_copy (alloc size:2): " << nAlloc_Size << std::endl;
-			nAlloc_Size *= m_nBlock_Allocation_Size;
-			std::cout << "realloc_copy (alloc size:3): " << nAlloc_Size << std::endl;
+			size_t nAlloc_Size = i_nNew_Size;
+			T * pNew = nl_alloc(nAlloc_Size);
 			m_nCapacity = nAlloc_Size;
-			std::cout << "realloc_copy: " << m_nCapacity << std::endl;
-			T * pNew = reinterpret_cast<T*>(std::malloc(sizeof(T) * nAlloc_Size));
 			if (m_pData != nullptr)
 			{
 				m_nSize = nl_copy_destruct(m_pData,m_nSize,pNew,m_nCapacity);
 				std::free(m_pData);
 			}
 			m_pData = pNew;
-			m_pPointer_To_End = m_pData + m_nSize;
+			if (m_pData != nullptr)
+				m_pPointer_To_End = m_pData + m_nSize;
+			else
+				m_pPointer_To_End = nullptr;
 		}
 		///
 		/// allocate or reallocate data block, copying old contents to the new data block if needed
@@ -98,13 +107,9 @@ namespace xstdtsl
 				size_t i_nNew_Size ///< the desired size of the new data block; if smaller than the current size will truncate the existing data
 				) noexcept(false) // don't know if T constructor or destructor throws exceptions
 		{
-			size_t nAlloc_Size = i_nNew_Size / m_nBlock_Allocation_Size;
-			if ((i_nNew_Size % m_nBlock_Allocation_Size) != 0)
-				nAlloc_Size++;
-			nAlloc_Size *= m_nBlock_Allocation_Size;
+			size_t nAlloc_Size = i_nNew_Size;
+			T * pNew = nl_alloc(nAlloc_Size);
 			m_nCapacity = nAlloc_Size;
-			std::cout << "nl_realloc_no_copy: " << m_nCapacity << std::endl;
-			T * pNew = reinterpret_cast<T*>(std::malloc(sizeof(T) * nAlloc_Size));
 			if (m_pData != nullptr)
 			{
 				nl_destruct_contents(m_pData,m_nSize);
@@ -112,7 +117,10 @@ namespace xstdtsl
 				std::free(m_pData);
 			}
 			m_pData = pNew;
-			m_pPointer_To_End = m_pData + m_nSize;
+			if (m_pData != nullptr)
+				m_pPointer_To_End = m_pData + m_nSize;
+			else
+				m_pPointer_To_End = nullptr;
 		}
 		///
 		/// clear the existing data by setting the current size to 0 and the end pointer to the starting point
@@ -151,6 +159,7 @@ namespace xstdtsl
 		{
 			dual_read_write_lock cLock(i_cRHO.m_mMutex,m_mMutex);
 			nl_clear();
+			nl_reserve(i_cRHO.m_nSize);
 			m_nSize = nl_copy_nondestruct(i_cRHO.m_pData,i_cRHO.m_nSize,m_pData,m_nCapacity);
 		}
 		///
