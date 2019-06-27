@@ -176,6 +176,20 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(!cIter.is_at_end());
 	}
 
+	std::cout << "--------------=============== read_control tests ===============--------------" << std::endl;
+	{
+		xstdtsl::safe_vector<int>::read_control cVect(cSFI);
+		std::cout << "confirm size is unchanged" << std::endl;
+		assert(cVect.size() == 3);
+		for (size_t nI = 0; nI < 3; nI++)
+		{
+			assert(cVect.load(nI) == (nI + 1));
+		}
+		assert(cVect.size() == cSFI.size());
+		assert(cVect.capacity() == cSFI.capacity());
+		assert(!cVect.empty());
+	}
+
 	std::cout << "--------------=============== write_iterator tests ===============--------------" << std::endl;
 	{
 		std::cout << "construct write iterator with int vector (forward iterator)" << std::endl;
@@ -213,5 +227,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(cIter.is_at_beginning());
 		assert(!cIter.is_at_end());
 	}
+
+		
 	return 0;	
 }
