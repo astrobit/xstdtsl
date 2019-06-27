@@ -144,7 +144,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 
 	std::cout << "--------------=============== read_iterator tests ===============--------------" << std::endl;
 	{
-		std::cout << "construct read iterator with int vector" << std::endl;
+		std::cout << "construct read iterator with int vector (forward iterator)" << std::endl;
 		xstdtsl::safe_vector<int>::read_iterator cIter(cSFI,xstdtsl::safe_vector<int>::iterator_base::beginning);
 		size_t nI = 1;
 		std::cout << "test contents using iterator" << std::endl;
@@ -159,6 +159,59 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(!cIter.is_at_beginning());
 		assert(cIter.is_at_end());
 	}
+	{
+		std::cout << "construct read iterator with int vector (reverse iterator)" << std::endl;
+		xstdtsl::safe_vector<int>::read_iterator cIter(cSFI,xstdtsl::safe_vector<int>::iterator_base::end);
+		size_t nI = 3;
+		std::cout << "test contents using iterator" << std::endl;
+		assert(!cIter.is_at_beginning());
+		assert(!cIter.is_at_end());
+		while (!cIter.is_at_beginning())
+		{
+			assert(cIter.load() == nI);
+			cIter--;
+			nI--;
+		}
+		assert(cIter.is_at_beginning());
+		assert(!cIter.is_at_end());
+	}
 
+	std::cout << "--------------=============== write_iterator tests ===============--------------" << std::endl;
+	{
+		std::cout << "construct write iterator with int vector (forward iterator)" << std::endl;
+		xstdtsl::safe_vector<int>::write_iterator cIter(cSFI,xstdtsl::safe_vector<int>::iterator_base::beginning);
+		size_t nI = 1;
+		std::cout << "test contents using iterator" << std::endl;
+		assert(!cIter.is_at_beginning());
+		assert(!cIter.is_at_end());
+		while (!cIter.is_at_end())
+		{
+			assert(cIter.load() == nI);
+			cIter.store(nI + 10);
+			assert(cIter.load() == (nI + 10));
+			++cIter;
+			nI++;
+		}
+		assert(!cIter.is_at_beginning());
+		assert(cIter.is_at_end());
+	}
+	{
+		std::cout << "construct write iterator with int vector (reverse iterator)" << std::endl;
+		xstdtsl::safe_vector<int>::write_iterator cIter(cSFI,xstdtsl::safe_vector<int>::iterator_base::end);
+		size_t nI = 3;
+		std::cout << "test contents using iterator" << std::endl;
+		assert(!cIter.is_at_beginning());
+		assert(!cIter.is_at_end());
+		while (!cIter.is_at_beginning())
+		{
+			assert(cIter.load() == (nI + 10));
+			cIter.store(nI + 20);
+			assert(cIter.load() == (nI + 20));
+			--cIter;
+			nI--;
+		}
+		assert(cIter.is_at_beginning());
+		assert(!cIter.is_at_end());
+	}
 	return 0;	
 }
