@@ -694,7 +694,7 @@ namespace xstdtsl
 		private:
 			bool m_bLock_Type_Write; // type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
 		protected:
-			const safe_vector<T> & m_cVector; ///< reference to the vector to control
+			safe_vector<T> & m_cVector; ///< reference to the vector to control
 		public:
 			///
 			/// default contructor (deleted)
@@ -704,7 +704,7 @@ namespace xstdtsl
 			/// contructor: tie the read control to a particular vector and lock the vector for read; blocking
 			///
 			control_base(
-				const safe_vector<T> & i_cVector, ///< the vector to be accessed
+				safe_vector<T> & i_cVector, ///< the vector to be accessed
 				bool i_bLock_Type_Write ///< flag to indicate the type of lock control to assume
 				)  noexcept: m_cVector(i_cVector)
 			{
@@ -778,7 +778,7 @@ namespace xstdtsl
 		};	
 
 		///
-		/// the read control class is designed to allow scoped read access to the vector that maintains a read lock throughout the scope. This is usefl when many random acess reads occur
+		/// the read control class is designed to allow scoped read access to the vector that maintains a read lock throughout the scope. This is useful when many random acess reads occur
 		///
 		class read_control : public control_base
 		{
@@ -791,8 +791,8 @@ namespace xstdtsl
 			/// contructor: tie the read control to a particular vector and lock the vector for read; blocking
 			///
 			read_control(
-				const safe_vector<T> & i_cVector ///< the vector to be accessed
-				)  noexcept: control_base(i_cVector,false)
+				safe_vector<T> & i_cVector ///< the vector to be accessed
+				)  noexcept: control_base(const_cast<safe_vector<T> &>(i_cVector),false)
 			{
 			}
 			///
@@ -819,7 +819,7 @@ namespace xstdtsl
 			/// contructor: tie the read control to a particular vector and lock the vector for read; blocking
 			///
 			write_control(
-				const safe_vector<T> & i_cVector ///< the vector to be accessed
+				safe_vector<T> & i_cVector ///< the vector to be accessed
 				)  noexcept: control_base(i_cVector,true)
 			{
 			}
@@ -864,6 +864,14 @@ namespace xstdtsl
 			void shrink_to_fit(void)
 			{
 				control_base::m_cVector.nl_shrink_to_fit();
+			}
+
+			///
+			/// clear the existing data; size will become 0; capacity not affected
+			///
+			void clear(void)
+			{
+				control_base::m_cVector.nl_clear();
 			}
 
 		};		
