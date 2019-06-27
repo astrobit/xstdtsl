@@ -4,7 +4,7 @@
 
 #include <xstdtsl_mutex>
 #include <xstdtsl_system_C.h>
-#include <iostream>
+//#include <iostream>
 
 namespace xstdtsl
 {
@@ -25,7 +25,6 @@ namespace xstdtsl
 		{
 			T * pRet = nullptr;
 			size_t nAlloc_Size = io_nSize / m_nBlock_Allocation_Size;
-			std::cout << "realloc_copy (alloc size:1): " << nAlloc_Size << std::endl;
 			if ((io_nSize % m_nBlock_Allocation_Size) != 0)
 				nAlloc_Size++;
 			nAlloc_Size *= m_nBlock_Allocation_Size;
@@ -137,18 +136,19 @@ namespace xstdtsl
 		void nl_sizing(void) noexcept
 		{
 			size_t nType_Size = sizeof(T);
-			switch (nType_Size)
+			size_t nWord_Size = xstdtsl_get_word_size();
+			if (nType_Size > 0 && nWord_Size > 0)
 			{
-			case 2:
-				m_nBlock_Allocation_Size = 4;
-				break;
-			case 4:
-				m_nBlock_Allocation_Size = 2;
-				break;
-			default:
-				m_nBlock_Allocation_Size = 8 * nType_Size;
-				break;
+				m_nBlock_Allocation_Size = nWord_Size * nType_Size; 
+
+				while ((m_nBlock_Allocation_Size & nWord_Size) == 0)
+				{
+					m_nBlock_Allocation_Size >>= 1;
+				}
+				m_nBlock_Allocation_Size /= nType_Size;
 			}
+			else
+				m_nBlock_Allocation_Size = 1;
 		}
 		///
 		/// copy a safe_vector of the same type; blocking write lock on this, blocking read lock on the vector to be copied; 
@@ -353,7 +353,7 @@ namespace xstdtsl
 		///
 		size_t max_size(void) const noexcept
 		{
-			return (get_available_memory() / (m_nBlock_Allocation_Size * sizeof(T))) * m_nBlock_Allocation_Size;
+			return (xstdtsl_get_available_memory() / (m_nBlock_Allocation_Size * sizeof(T))) * m_nBlock_Allocation_Size;
 		}
 
 		///
@@ -621,9 +621,9 @@ namespace xstdtsl
 					const read_iterator & i_cIterator ///< the iterator to copy
 				) noexcept
 			{
-				iterator_base::m_cVector.m_cMutex.read_unlock();
+				iterator_base::m_cVector.m_mMutex.read_unlock();
 				iterator_base::m_cVector = i_cIterator.m_cVector;
-				iterator_base::m_cVector.m_cMutex.read_lock();
+				iterator_base::m_cVector.m_mMutex.read_lock();
 				iterator_base::m_pCursor = i_cIterator.m_pCursor;
 				return *this;
 			}
@@ -694,7 +694,7 @@ namespace xstdtsl
 		private:
 			bool m_bLock_Type_Write; // type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
 		protected:
-			safe_vector<T> & m_cVector; ///< reference to the vector to control
+			const safe_vector<T> & m_cVector; ///< reference to the vector to control
 		public:
 			///
 			/// default contructor (deleted)
@@ -710,9 +710,9 @@ namespace xstdtsl
 			{
 				m_bLock_Type_Write = i_bLock_Type_Write;
 				if (m_bLock_Type_Write)
-					m_cVector.m_cMutex.write_lock();
+					m_cVector.m_mMutex.write_lock();
 				else
-					m_cVector.m_cMutex.read_lock();
+					m_cVector.m_mMutex.read_lock();
 
 			}
 			///
@@ -725,9 +725,9 @@ namespace xstdtsl
 			~control_base(void) noexcept
 			{
 				if (m_bLock_Type_Write)
-					m_cVector.m_cMutex.write_unlock();
+					m_cVector.m_mMutex.write_unlock();
 				else
-					m_cVector.m_cMutex.read_unlock();
+					m_cVector.m_mMutex.read_unlock();
 			}
 			///
 			/// assignment / copy operator (deleted)

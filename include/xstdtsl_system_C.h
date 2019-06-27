@@ -7,8 +7,8 @@
 
 extern "C"
 {
-	__XSTDTSL_EXPORT size_t get_word_size(void) noexcept;
-	__XSTDTSL_EXPORT size_t get_available_memory(void) noexcept;
+	__XSTDTSL_EXPORT size_t xstdtsl_get_word_size(void) noexcept;
+	__XSTDTSL_EXPORT size_t xstdtsl_get_available_memory(void) noexcept;
 }
 
 

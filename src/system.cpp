@@ -5,6 +5,8 @@
 #include <unistd.h>
 #endif
 
+#include <xstdtsl_system_C.h>
+
 class system_data
 {
 public:
@@ -30,12 +32,12 @@ public:
 system_data	g_cSystem_Data;
 bool		g_bAllow_Exceptions = true;
 
-size_t get_word_size(void)
+size_t xstdtsl_get_word_size(void) noexcept
 {
 	return g_cSystem_Data.m_nWord_Size;
 }
 
-size_t get_available_memory(void)
+size_t xstdtsl_get_available_memory(void) noexcept
 {
 	size_t nRet;
 #ifdef __XSTDTSL_WINDOWS
