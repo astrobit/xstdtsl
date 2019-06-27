@@ -227,6 +227,35 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(cIter.is_at_beginning());
 		assert(!cIter.is_at_end());
 	}
+	std::cout << "--------------=============== write_control tests ===============--------------" << std::endl;
+	{
+		xstdtsl::safe_vector<int>::write_control cVect(cSFI);
+		std::cout << "confirm size is unchanged" << std::endl;
+		assert(cVect.size() == 3);
+		for (size_t nI = 0; nI < 3; nI++)
+		{
+			std::cout << "confirm contents are unchanged (" << nI << ")" << std::endl;
+			assert(cVect.load(nI) == (nI + 21));
+		}
+		std::cout << "confirm not empty" << std::endl;
+		assert(!cVect.empty());
+		std::cout << "test push back" << std::endl;
+		cVect.push_back(4);
+		std::cout << "confirm correct size" << std::endl;
+		assert(cVect.size() == 4);
+		std::cout << "confirm data matches" << std::endl;
+		assert(cVect.load(3) == 4);
+		std::cout << "test store" << std::endl;
+		cVect.store(3,5);
+		std::cout << "confirm correct size" << std::endl;
+		assert(cVect.size() == 4);
+		std::cout << "confirm data matches" << std::endl;
+		assert(cVect.load(3) == 5);
+		std::cout << "test clear" << std::endl;
+		cVect.clear();
+		std::cout << "confirm correct size" << std::endl;
+		assert(cVect.size() == 0);
+	}
 
 		
 	return 0;	
