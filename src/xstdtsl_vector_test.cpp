@@ -142,7 +142,23 @@ int main(int i_nNum_Params, char * i_pParams[])
 	std::cout << "confirm vector is empty" << std::endl;
 	assert(cSFF.empty());
 
-
+	std::cout << "--------------=============== read_iterator tests ===============--------------" << std::endl;
+	{
+		std::cout << "construct read iterator with int vector" << std::endl;
+		xstdtsl::safe_vector<int>::read_iterator cIter(cSFI,xstdtsl::safe_vector<int>::iterator_base::beginning);
+		size_t nI = 1;
+		std::cout << "test contents using iterator" << std::endl;
+		assert(!cIter.is_at_beginning());
+		assert(!cIter.is_at_end());
+		while (!cIter.is_at_end())
+		{
+			assert(cIter.load() == nI);
+			cIter++;
+			nI++;
+		}
+		assert(!cIter.is_at_beginning());
+		assert(cIter.is_at_end());
+	}
 
 	return 0;	
 }
