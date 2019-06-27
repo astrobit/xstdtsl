@@ -410,11 +410,13 @@ namespace xstdtsl
 			nl_nullify();
 		}
 			
-
+		///
+		/// base class for vector iterators
+		///
 		class iterator_base
 		{
 		private:
-			bool m_bLock_Type_Write; // type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
+			bool m_bLock_Type_Write; ///< type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
 		public:
 			/// 
 			/// enumeration to describe whether the iteration begins at the beginning or end of the vector
@@ -438,53 +440,64 @@ namespace xstdtsl
 			{
 				m_bLock_Type_Write = i_bLock_Type_Write;
 				if (m_bLock_Type_Write)
-					m_cVector.write_lock();
+					m_cVector.m_mMutex.write_lock();
 				else
-					m_cVector.read_lock();
+					m_cVector.m_mMutex.read_lock();
 				if (i_eStart_Point == start_point::end)
 				{
 					m_pCursor = i_cVector.m_pPointer_To_End;
-					m_pCursor--;
+					if (m_pCursor != nullptr)
+						m_pCursor--;
 				}
 				else
 					m_pCursor = i_cVector.m_pData;
 			}
 			///
+			/// constructor that initializes the iterator and aquires a read lock on the vector
+			///
+			iterator_base(
+				const safe_vector<T> & i_cVector, ///< the vector to iterate over
+				T * i_pCursor, ///< the starting point to use within the vector
+				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
+				)  noexcept: m_cVector(i_cVector)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				if (m_bLock_Type_Write)
+					m_cVector.m_mMutex.write_lock();
+				else
+					m_cVector.m_mMutex.read_lock();
+				m_pCursor = i_pCursor;
+			}
+			///
 			/// copy constructor (deleted)
 			///
-			iterator_base(const iterator_base & i_cIterator)  = delete;
+			iterator_base( const iterator_base & i_cRHO) = delete;
+
 			///
 			/// destructor: releases lock
 			///
 			virtual ~iterator_base(void)
 			{
 				if (m_bLock_Type_Write)
-					m_cVector.write_unlock();
+					m_cVector.m_mMutex.write_unlock();
 				else
-					m_cVector.read_unlock();
+					m_cVector.m_mMutex.read_unlock();
 			}
+			///
+			/// assign operator (deleted)
+			///
+			iterator_base & operator =( const iterator_base & i_cRHO) = delete;
+
+
 			///
 			/// pre-increment operator; advances the iterator within the vector; will not advance past the end of the vector
 			/// \returns a reference to this iterator
 			///
 			virtual iterator_base & operator ++ (void) noexcept
 			{
-				if (m_pCursor < m_cVector.m_pPointer_To_End)
+				if (m_pCursor != nullptr && m_pCursor < m_cVector.m_pPointer_To_End)
 					m_pCursor++;
 				return *this;
-			}
-			///
-			/// post-increment operator; advances the iterator within the vector; will not advance past the end of the vector
-			/// \returns an iterator reflecting the state prior to increment
-			///
-			virtual iterator_base operator ++ (
-				int i_iValue ///< ignored
-				) noexcept
-			{
-				iterator_base cRet(*this);
-				if (m_pCursor < m_cVector.m_pPointer_To_End)
-					m_pCursor++;
-				return cRet;
 			}
 			///
 			/// pre-decrement operator; rewinds the iterator within the vector; will not rewind past the start of the vector
@@ -492,22 +505,9 @@ namespace xstdtsl
 			///
 			virtual iterator_base & operator -- (void) noexcept
 			{
-				if (m_pCursor >= m_cVector.m_pData)
+				if (m_pCursor != nullptr && m_pCursor >= m_cVector.m_pData)
 					m_pCursor--;
 				return *this;
-			}
-			///
-			/// post-decrement operator; rewinds the iterator within the vector; will not rewind past the start of the vector
-			/// \returns an iterator reflecting the state prior to decrement
-			///
-			virtual iterator_base operator -- (
-				int i_nValue ///< ignored
-				) noexcept
-			{
-				iterator_base cRet(*this);
-				if (m_pCursor >= m_cVector.m_pData)
-					m_pCursor--;
-				return cRet;
 			}
 			///
 			/// add-assign operator; advances the iterator within the vector; will not advance past the end of the vector or prior to the start of the data
@@ -515,11 +515,14 @@ namespace xstdtsl
 			///
 			virtual iterator_base & operator += (int i_nValue) noexcept
 			{
-				m_pCursor += i_nValue;
-				if (m_pCursor > m_cVector.m_pPointer_To_End)
-					m_pCursor = m_cVector.m_pPointer_To_End;
-				else if (m_pCursor < m_cVector.m_pData)
-					m_pCursor = m_cVector.m_pData - 1;
+				if (m_pCursor != nullptr)
+				{
+					m_pCursor += i_nValue;
+					if (m_pCursor > m_cVector.m_pPointer_To_End)
+						m_pCursor = m_cVector.m_pPointer_To_End;
+					else if (m_pCursor < m_cVector.m_pData)
+						m_pCursor = m_cVector.m_pData - 1;
+				}
 				return *this;
 			}
 			///
@@ -528,11 +531,14 @@ namespace xstdtsl
 			///
 			virtual iterator_base & operator -= (int i_nValue) noexcept
 			{
-				m_pCursor -= i_nValue;
-				if (m_pCursor > m_cVector.m_pPointer_To_End)
-					m_pCursor = m_cVector.m_pPointer_To_End;
-				else if (m_pCursor < m_cVector.m_pData)
-					m_pCursor = m_cVector.m_pData - 1;
+				if (m_pCursor != nullptr)
+				{
+					m_pCursor -= i_nValue;
+					if (m_pCursor > m_cVector.m_pPointer_To_End)
+						m_pCursor = m_cVector.m_pPointer_To_End;
+					else if (m_pCursor < m_cVector.m_pData)
+						m_pCursor = m_cVector.m_pData - 1;
+				}
 				return *this;
 			}
 			///
@@ -541,7 +547,7 @@ namespace xstdtsl
 			///
 			virtual bool operator ==(const iterator_base & i_cRHO) noexcept
 			{
-				return (m_cVector == i_cRHO.m_cVector && m_pCursor == i_cRHO.m_pCursor);
+				return (&m_cVector == &i_cRHO.m_cVector && m_pCursor == i_cRHO.m_pCursor);
 			}
 			///
 			/// inequality operator
@@ -549,7 +555,7 @@ namespace xstdtsl
 			///
 			virtual bool operator !=(const iterator_base & i_cRHO) noexcept
 			{
-				return (m_cVector != i_cRHO.m_cVector || m_pCursor != i_cRHO.m_pCursor);
+				return (&m_cVector != &i_cRHO.m_cVector || m_pCursor != i_cRHO.m_pCursor);
 			}
 			///
 			/// retrive the value at the current location of the iterator; if the iterator is not pointing to valid data will return type T with default contructor
@@ -558,7 +564,7 @@ namespace xstdtsl
 			virtual T load(void) noexcept(false)
 			{
 				T tRet = T();
-				if (m_pCursor >= m_cVector.m_pData && m_pCursor < m_cVector.m_pPointer_To_End)
+				if (m_pCursor != nullptr && m_pCursor >= m_cVector.m_pData && m_pCursor < m_cVector.m_pPointer_To_End)
 					tRet = m_pCursor[0];
 				return tRet;
 			}
@@ -568,7 +574,7 @@ namespace xstdtsl
 			///
 			virtual bool is_at_end(void) noexcept
 			{
-				return m_pCursor >= m_cVector.m_pPointer_To_End;
+				return m_cVector.m_pPointer_To_End == nullptr || m_pCursor >= m_cVector.m_pPointer_To_End;
 			}
 			///
 			/// determine if the iterator is prior to the beginning of the vector data
@@ -576,7 +582,7 @@ namespace xstdtsl
 			///
 			virtual bool is_at_beginning(void) noexcept
 			{
-				return m_pCursor < m_cVector.m_pData;
+				return m_cVector.m_pData == nullptr || m_pCursor < m_cVector.m_pData;
 			}
 		};
 
@@ -621,6 +627,27 @@ namespace xstdtsl
 				iterator_base::m_pCursor = i_cIterator.m_pCursor;
 				return *this;
 			}
+
+			///
+			/// post-increment operator; advances the iterator within the vector; will not advance past the end of the vector
+			/// \returns a reference to this iterator
+			///
+			read_iterator operator ++ (int i_nValue) noexcept
+			{
+				read_iterator cRet(*this);
+				iterator_base::operator++();
+				return cRet;
+			}
+			///
+			/// post-decrement operator; rewinds the iterator within the vector; will not rewind past the start of the vector
+			/// \returns a reference to this iterator
+			///
+			read_iterator & operator -- (int i_nValue) noexcept
+			{
+				read_iterator cRet(*this);
+				iterator_base::operator--();
+				return cRet;
+			}
 		};
 
 		class write_iterator : public iterator_base
@@ -657,7 +684,7 @@ namespace xstdtsl
 			///
 			void store(T i_tT) noexcept
 			{
-				if (iterator_base::m_pCursor >= iterator_base::m_cVector.m_pData && iterator_base::m_pCursor < iterator_base::m_cVector.m_pPointer_To_End)
+				if (iterator_base::m_pCursor != nullptr && iterator_base::m_pCursor >= iterator_base::m_cVector.m_pData && iterator_base::m_pCursor < iterator_base::m_cVector.m_pPointer_To_End)
 					iterator_base::m_pCursor[0] = i_tT;
 			}
 		};
