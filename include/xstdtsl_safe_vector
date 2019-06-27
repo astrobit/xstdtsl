@@ -426,7 +426,7 @@ namespace xstdtsl
 					};
 		protected:
 			const safe_vector<T> & m_cVector; ///< the vector that is being iterated over
-			const T * m_pCursor; ///< a cursor pointing to the current data location within the vector
+			T * m_pCursor; ///< a cursor pointing to the current data location within the vector
 		public:
 			iterator_base(void) = delete;
 			///
@@ -642,7 +642,7 @@ namespace xstdtsl
 			/// post-decrement operator; rewinds the iterator within the vector; will not rewind past the start of the vector
 			/// \returns a reference to this iterator
 			///
-			read_iterator & operator -- (int i_nValue) noexcept
+			read_iterator operator -- (int i_nValue) noexcept
 			{
 				read_iterator cRet(*this);
 				iterator_base::operator--();
