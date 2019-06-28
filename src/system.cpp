@@ -43,7 +43,7 @@ size_t xstdtsl_get_available_memory(void) noexcept
 #ifdef __XSTDTSL_WINDOWS
 	MEMORYSTATUSEX cMem_Status;
 	GlobalMemoryStatusEx(&cMem_Status);
-	nRet = cMem_Status.ullAvailPhys;
+	nRet = (size_t)(cMem_Status.ullAvailPhys);
 #else
 	nRet = sysconf(_SC_AVPHYS_PAGES) * g_cSystem_Data.m_nPage_Size;    /* available pages */
 #endif
