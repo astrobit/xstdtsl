@@ -161,12 +161,15 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\include\xstdtsl_mutex_C.h" />
     <ClInclude Include="..\..\..\include\xstdtsl_mutex_internal.hpp" />
+    <ClInclude Include="..\..\..\include\xstdtsl_system_C.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\src\system.cpp" />
     <ClCompile Include="..\..\..\src\xstdtsl_mutex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\include\xstdtsl_mutex" />
+    <None Include="..\..\..\include\xstdtsl_safe_vector" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

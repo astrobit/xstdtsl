@@ -152,7 +152,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(!cIter.is_at_end());
 		while (!cIter.is_at_end())
 		{
-			assert(cIter.load() == nI);
+			assert(cIter.load() == (int)nI);
 			cIter++;
 			nI++;
 		}
@@ -168,7 +168,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(!cIter.is_at_end());
 		while (!cIter.is_at_beginning())
 		{
-			assert(cIter.load() == nI);
+			assert(cIter.load() == (int)nI);
 			cIter--;
 			nI--;
 		}
@@ -183,7 +183,7 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(cVect.size() == 3);
 		for (size_t nI = 0; nI < 3; nI++)
 		{
-			assert(cVect.load(nI) == (nI + 1));
+			assert(cVect.load(nI) == (int)(nI + 1));
 		}
 		assert(cVect.size() == cSFI.size());
 		assert(cVect.capacity() == cSFI.capacity());
@@ -201,8 +201,8 @@ int main(int i_nNum_Params, char * i_pParams[])
 		while (!cIter.is_at_end())
 		{
 			assert(cIter.load() == nI);
-			cIter.store(nI + 10);
-			assert(cIter.load() == (nI + 10));
+			cIter.store((int)(nI + 10));
+			assert(cIter.load() == (int)(nI + 10));
 			++cIter;
 			nI++;
 		}
@@ -218,9 +218,9 @@ int main(int i_nNum_Params, char * i_pParams[])
 		assert(!cIter.is_at_end());
 		while (!cIter.is_at_beginning())
 		{
-			assert(cIter.load() == (nI + 10));
-			cIter.store(nI + 20);
-			assert(cIter.load() == (nI + 20));
+			assert(cIter.load() == (int)(nI + 10));
+			cIter.store((int)(nI + 20));
+			assert(cIter.load() == (int)(nI + 20));
 			--cIter;
 			nI--;
 		}

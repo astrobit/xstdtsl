@@ -74,4 +74,6 @@ src/.dirstamp
 test-driver
 *.trs
 configure.scan
+*.db-shm
+*.db-wal
 

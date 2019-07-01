@@ -21,14 +21,23 @@
     <ClInclude Include="..\..\..\include\xstdtsl_mutex_C.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\xstdtsl_system_C.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\xstdtsl_mutex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\include\xstdtsl_mutex">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="..\..\..\include\xstdtsl_safe_vector">
       <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
