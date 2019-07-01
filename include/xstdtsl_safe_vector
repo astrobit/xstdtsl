@@ -694,7 +694,7 @@ namespace xstdtsl
 		private:
 			bool m_bLock_Type_Write; // type of lock to hold on the vector; true indicates a write lock, false indicates a read lock
 		protected:
-			safe_vector<T> & m_cVector; ///< reference to the vector to control
+			safe_vector<T> * m_pVector; ///< reference to the vector to control
 		public:
 			///
 			/// default contructor (deleted)
@@ -706,13 +706,13 @@ namespace xstdtsl
 			control_base(
 				safe_vector<T> & i_cVector, ///< the vector to be accessed
 				bool i_bLock_Type_Write ///< flag to indicate the type of lock control to assume
-				)  noexcept: m_cVector(i_cVector)
+				)  noexcept: m_pVector(&i_cVector)
 			{
 				m_bLock_Type_Write = i_bLock_Type_Write;
 				if (m_bLock_Type_Write)
-					m_cVector.m_mMutex.write_lock();
+					m_pVector->m_mMutex.write_lock();
 				else
-					m_cVector.m_mMutex.read_lock();
+					m_pVector->m_mMutex.read_lock();
 
 			}
 			///
@@ -725,21 +725,40 @@ namespace xstdtsl
 			~control_base(void) noexcept
 			{
 				if (m_bLock_Type_Write)
-					m_cVector.m_mMutex.write_unlock();
+					m_pVector->m_mMutex.write_unlock();
 				else
-					m_cVector.m_mMutex.read_unlock();
+					m_pVector->m_mMutex.read_unlock();
 			}
 			///
 			/// assignment / copy operator (deleted)
 			///
 			control_base & operator = (const control_base & i_cIterator) = delete;
 			///
+			/// assignement operator; releases read access to existing tree and aquires read access to a different tree; blocking(Read)
+			///
+			control_base & operator =(const safe_vector<T> & i_cVector) noexcept
+			{
+				if (m_bLock_Type_Write)
+				{
+					m_pVector->m_mMutex.write_unlock();
+					i_cVector.m_mMutex.write_lock();
+				}
+				else
+				{
+					m_pVector->m_mMutex.read_unlock();
+					i_cVector.m_mMutex.read_lock();
+				}
+				control_base::m_pVector = &i_cVector;
+				return *this;
+			}
+
+			///
 			/// test if the vector is empty
 			/// \returns true if the vector is empty; false otherwise
 			///
 			bool empty(void)  noexcept
 			{
-				return m_cVector.nl_empty();
+				return m_pVector->nl_empty();
 			}
 			///
 			/// returns the current size of the vector
@@ -747,7 +766,7 @@ namespace xstdtsl
 			///
 			size_t size(void) const noexcept
 			{
-				return m_cVector.nl_size();
+				return m_pVector->nl_size();
 			}
 			///
 			/// returns the current capacity of the vector
@@ -755,7 +774,7 @@ namespace xstdtsl
 			///
 			virtual size_t capacity(void) noexcept
 			{
-				return m_cVector.nl_capacity();
+				return m_pVector->nl_capacity();
 			}
 
 			///
@@ -763,7 +782,7 @@ namespace xstdtsl
 			///
 			virtual size_t max_size(void) const noexcept
 			{
-				return m_cVector.max_size();
+				return m_pVector->max_size();
 			}
 			///
 			/// retrieve data from within the vector
@@ -773,7 +792,7 @@ namespace xstdtsl
 					size_t i_nIndex ///< the location within the vector at which to retrieve the data
 					) const noexcept(false) // don't know if T() throws an exception
 			{
-				return m_cVector.nl_load(i_nIndex);
+				return m_pVector->nl_load(i_nIndex);
 			}
 		};	
 
@@ -792,17 +811,26 @@ namespace xstdtsl
 			///
 			read_control(
 				safe_vector<T> & i_cVector ///< the vector to be accessed
-				)  noexcept: control_base(const_cast<safe_vector<T> &>(i_cVector),false)
+				)  noexcept: control_base(i_cVector,false)
 			{
 			}
 			///
-			/// copy contructor (deleted)
+			/// copy contructor; creates a new read_control on a tree that an existing read control is accessing; blocking(read)
 			///
-			read_control(const read_iterator & i_cIterator)   = delete;
+			read_control(const read_control & i_cController) noexcept : control_base(*i_cController->m_pVector,false) 
+			{
+				;
+			}
 			///
-			/// assignment / copy operator (deleted)
+			/// assignement operator; releases read access to existing tree and aquires read access to tree referred to by other controller; blocking(Read)
 			///
-			read_control & operator = (const read_iterator & i_cIterator) = delete;
+			read_control & operator =(const read_control & i_cController) noexcept
+			{
+				control_base::m_pVector->m_mMutex.read_unlock();
+				i_cController.m_pVector->m_mMutex.read_lock();
+				control_base::m_pVector = i_cController.m_pVector;
+				return *this;
+			}
 		};		
 
 		///
@@ -839,14 +867,14 @@ namespace xstdtsl
 				const T& i_tT ///< the data to be stored
 				) noexcept
 			{
-				control_base::m_cVector.nl_store(i_nIndex,i_tT);
+				control_base::m_pVector->nl_store(i_nIndex,i_tT);
 			}
 			///
 			/// store the value at the current location of the iterator; if the iterator is not pointing to valid data the request will be ignored
 			///
 			void push_back(const T &i_tT) noexcept
 			{
-				control_base::m_cVector.nl_push_back(i_tT);
+				control_base::m_pVector->nl_push_back(i_tT);
 			}
 			///
 			/// expands the vector capacity if the requested capacity is larger than the existing capacity
@@ -855,7 +883,7 @@ namespace xstdtsl
 				size_t i_nCapacity ///< the desired new capacity
 				) noexcept
 			{
-				control_base::m_cVector.nl_reserve(i_nCapacity);
+				control_base::m_pVector->nl_reserve(i_nCapacity);
 			}
 
 			///
@@ -863,7 +891,7 @@ namespace xstdtsl
 			///
 			void shrink_to_fit(void)
 			{
-				control_base::m_cVector.nl_shrink_to_fit();
+				control_base::m_pVector->nl_shrink_to_fit();
 			}
 
 			///
@@ -871,7 +899,7 @@ namespace xstdtsl
 			///
 			void clear(void)
 			{
-				control_base::m_cVector.nl_clear();
+				control_base::m_pVector->nl_clear();
 			}
 
 		};		
