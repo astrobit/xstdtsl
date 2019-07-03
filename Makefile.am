@@ -19,7 +19,7 @@ xstdtsl_avl_tree_test_exe_SOURCES = src/xstdtsl_avl_tree_test.cpp src/xstdtsl_av
 xstdtsl_avl_tree_test_exe_CFLAGS = --std=c++17 -pthread
 xstdtsl_avl_tree_test_exe_LDFLAGS = -lpthread -lxstdtsl
 
-include_HEADERS = include/xstdtsl_mutex include/xstdtsl_system_C.h include/xstdtsl_mutex_C.h include/xstdtsl_safe_vector  include/xstdtsl_safe_binary_tree   include/xstdtsl_safe_avl_tree.hpp
+include_HEADERS = include/xstdtsl_mutex include/xstdtsl_system_C.h include/xstdtsl_mutex_C.h include/xstdtsl_safe_vector  include/xstdtsl_safe_binary_tree   include/xstdtsl_safe_avl_tree
 noinst_HEADERS = include/xstdtsl_mutex_internal.hpp include/xstdtsl_vector_test.hpp include/xstdtsl_mutex_test.hpp include/xstdtsl_binary_tree_test.hpp include/xstdtsl_avl_tree_test.hpp
 
 # Install the pkg-config file; the directory is set using
