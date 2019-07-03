@@ -1,0 +1,178 @@
+#pragma once
+#ifndef XSTDTSL_SAFE_AVL_TREE_H
+#define XSTDTSL_SAFE_AVL_TREE_H
+#include <xstdtsl_safe_binary_tree>
+namespace xstdtsl
+{
+	///
+	/// 
+	///
+	template <class T> class safe_avl_tree : public safe_binary_tree<T>
+	{
+	private:
+		class avl_tree_node : public safe_binary_tree<T>::tree_node
+		{
+		private:
+			int		m_nHeight;
+		public:
+			///
+			/// void constructor; creates node with no parent or children and default constructed key
+			///
+			avl_tree_node(void)  noexcept(noexcept(T(std::declval<T>()))) : safe_binary_tree<T>::tree_node()
+			{
+				m_nHeight = 1;
+			}
+			///
+			/// creates node with the given parent and specified constructed key; children will be null
+			///
+			avl_tree_node(avl_tree_node * i_pParent, T i_tKey) noexcept(noexcept(T(std::declval<T>()))) : safe_binary_tree<T>::tree_node(i_pParent,i_tKey)
+			{
+				m_nHeight = 1;
+			}
+		protected:
+			///
+			/// Find the balance of the node
+			///
+			int getBalance(void)  const noexcept
+			{
+				int nLeft_Height = 0;
+				int nRight_Height = 0;
+				if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
+					nLeft_Height  = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
+				if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
+					nRight_Height  = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
+				return nLeft_Height - nRight_Height; 
+			} 
+			///
+			/// rotate the tree based at the current node to the right
+			///
+			avl_tree_node *rotate_right(void) noexcept
+			{ 
+				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::m_pLeft; 
+				avl_tree_node * pRightOfLeft = pRet->m_pRight; 
+
+				// Perform rotation 
+				pRet->m_pRight = const_cast<avl_tree_node *>(this); 
+				safe_binary_tree<T>::tree_node::m_pLeft = pRightOfLeft; 
+
+				// Update heights 
+				int nLeftHeight = 0;
+				int nRightHeight = 0;
+				if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
+					nLeftHeight = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
+				if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
+					nRightHeight = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
+
+				int nLeftLeftHeight = 0;
+				int nLeftRightHeight = 0;
+				if (pRet->m_pLeft != nullptr)
+					nLeftLeftHeight = pRet->m_pLeft->m_nHeight;
+				if (pRet->m_pRight != nullptr)
+					nLeftRightHeight = pRet->m_pRight->m_nHeight;
+
+				m_nHeight = 1 + std::max(nLeftHeight, nRightHeight); 
+				pRet->m_nHeight = 1 + std::max(nLeftLeftHeight,nLeftRightHeight);
+
+				// Return new root 
+				return pRet; 
+			} 
+
+			///
+			/// rotate the tree based at the current node to the left
+			///
+			avl_tree_node *rotate_left(void) noexcept
+			{ 
+				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::m_pRight; 
+				avl_tree_node * pLeftOfRight = pRet->m_pLeft; 
+
+				// Perform rotation 
+				pRet->m_pLeft = const_cast<avl_tree_node *>(this); 
+				safe_binary_tree<T>::tree_node::m_pright = pLeftOfRight; 
+
+				// Update heights 
+				int nLeftHeight = 0;
+				int nRightHeight = 0;
+				if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
+					nLeftHeight = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
+				if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
+					nRightHeight = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
+
+				int nLeftLeftHeight = 0;
+				int nLeftRightHeight = 0;
+				if (pRet->m_pLeft != nullptr)
+					nLeftLeftHeight = pRet->m_pLeft->m_nHeight;
+				if (pRet->m_pRight != nullptr)
+					nLeftRightHeight = pRet->m_pRight->m_nHeight;
+
+				m_nHeight = 1 + std::max(nLeftHeight, nRightHeight); 
+				pRet->m_nHeight = 1 + std::max(nLeftLeftHeight,nLeftRightHeight);
+
+				// Return new root 
+				return pRet; 
+			} //function avl_tree_node *rotate_left(void)
+		public:
+			// Recursive function to insert a key 
+			// in the subtree rooted with node and 
+			// returns the new root of the subtree. 
+			avl_tree_node* insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
+			{ 
+				avl_tree_node* pRet = const_cast<avl_tree_node*>(this);
+				if (i_tKey != safe_binary_tree<T>::tree_node::m_tKey)
+				{
+					// 1. Insert the new key/node as normal BST insert
+					if (i_tKey < safe_binary_tree<T>::tree_node::m_tKey)
+					{
+						if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
+							safe_binary_tree<T>::tree_node::m_pLeft = safe_binary_tree<T>::tree_node::m_pLeft->insert(i_tKey);
+						else
+							safe_binary_tree<T>::tree_node::m_pLeft = new avl_tree_node(this,i_tKey);
+					}
+					else if (i_tKey > safe_binary_tree<T>::tree_node::m_tKey)
+					{
+						if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
+							safe_binary_tree<T>::tree_node::m_pRight = safe_binary_tree<T>::tree_node::m_pRight->insert(i_tKey);
+						else
+							safe_binary_tree<T>::tree_node::m_pRight = new avl_tree_node(this,i_tKey);
+					}
+					// 2. Update height of this node
+					int nLeft_Height = 0;
+					int nRight_Height = 0;
+					if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
+						nLeft_Height  = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
+					if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
+						nRight_Height  = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
+					m_nHeight = 1 + std::max(nLeft_Height,nRight_Height);
+
+					/* 3. Get the balance factor of this ancestor 
+						node to check whether this node became 
+						unbalanced */
+					int nBalance = getBalance(); 
+
+					// If this node becomes unbalanced, then 
+					// there are 4 cases 
+
+					if (nBalance > 1)
+					{
+						// Left Right Case 
+						if (i_tKey > safe_binary_tree<T>::tree_node::m_tKey && safe_binary_tree<T>::tree_node::m_pLeft != nullptr) 
+							safe_binary_tree<T>::tree_node::m_pLeft = safe_binary_tree<T>::tree_node::m_pLeft->rotate_left(); 
+						// otherwise Left Left Case 
+						pRet = rotate_right(); 
+					}
+					else if (nBalance < -1) 
+					{
+						// Right Left Case 
+						if (i_tKey < safe_binary_tree<T>::tree_node::m_tKey && safe_binary_tree<T>::tree_node::m_pRight != nullptr) 
+							safe_binary_tree<T>::tree_node::m_pRight = safe_binary_tree<T>::tree_node::m_pRight->rotate_right(); 
+						// otherwise Right Right Case 
+						pRet = rotate_left(); 
+					}
+				}
+
+				// return the new root
+				return pRet; 
+			} //function avl_tree_node* insert(T i_tKey)
+		}; // class avl_tree_node
+	}; // class safe_avl_tree
+} // namespace xstdtsl
+#endif //#ifndef XSTDTSL_SAFE_AVL_TREE_H
