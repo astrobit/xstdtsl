@@ -7,26 +7,41 @@
 namespace xstdtsl
 {
 
+	///
+	/// a basic binary tree that doesn't self-balance
+	///
 	template <class T> class safe_binary_tree
 	{
-	public:
+	protected:
+		///
+		/// a node within the tree
+		///
 		class tree_node
 		{ 
 		protected: 
-			T 						m_tKey;
-			tree_node *				m_pLeft;
-			tree_node *				m_pRight;
-			const tree_node *		m_pParent;
+			T 						m_tKey; ///< the value of the node
+			tree_node *				m_pLeft; ///< the left child of the node
+			tree_node *				m_pRight; ///< the right child of the node
+			const tree_node *		m_pParent; ///< the parent of the node
 
 		public:
+			///
+			/// void constructor; create an empty, valueless node (i.e. no children or parent; key  constructed with default constructor)
+			///
 			tree_node(void) noexcept(noexcept(T(std::declval<T>()))) : m_tKey(), m_pParent(nullptr), m_pLeft(nullptr), m_pRight(nullptr) 
 			{
 				;
 			}
+			///
+			/// create a node with no children and the given parent and value
+			///
 			tree_node(const tree_node * i_pParent, T i_tKey) noexcept(noexcept(T(std::declval<T>()))) : m_tKey(i_tKey), m_pParent(i_pParent), m_pLeft(nullptr), m_pRight(nullptr) 
 			{
 				;	
 			}
+			///
+			/// destructor: destroy the left children then the right children of the current node
+			///
 			virtual ~tree_node(void) noexcept(noexcept(std::declval<T>().~T()))
 			{
 				if (m_pLeft != nullptr)
@@ -36,38 +51,65 @@ namespace xstdtsl
 					delete m_pRight;
 				m_pRight = nullptr;
 			}
+
+			///
+			/// get the value of the current node
+			///
 			virtual T get_key(void) const noexcept
 			{
 				return m_tKey;
 			}
+			///
+			/// get the left child of the current node
+			/// \returns a pointer to the left child, or nullptr if the node does not have a right child
+			///
 			virtual tree_node * get_left(void) const noexcept
 			{
 				return m_pLeft;
 			}
+			///
+			/// set the left child of the current node
+			///
 			virtual void set_left(tree_node * i_pNew_Left) noexcept
 			{
 				m_pLeft = i_pNew_Left;
 			}
 
+			///
+			/// get the right child of the current node
+			/// \returns a pointer to the right child, or nullptr if the node does not have a right child
+			///
 			virtual tree_node * get_right(void) const noexcept
 			{
 				return m_pRight;
 			}
+			///
+			/// set the right child of the current node
+			///
 			virtual void set_right(tree_node * i_pNew_Right) noexcept
 			{
 				m_pRight = i_pNew_Right;
 			}
+			///
+			/// get the parent of the current node
+			/// \returns a pointer to the parent, or nullptr if the node is root of the tree
+			///
 			virtual tree_node * get_parent(void) const noexcept
 			{
 				return const_cast<tree_node *>(m_pParent);
 			}
 
+			///
+			/// set the parent of the current node
+			///
 			virtual void set_parent(tree_node * i_pNew_Parent) noexcept
 			{
 				m_pParent = i_pNew_Parent;
 			}
-
-			virtual void insert(T i_tNew_Key) noexcept(noexcept(T(std::declval<T>())))
+			///
+			/// insert a new node as a child of the current node
+			///
+			virtual tree_node * insert(T i_tNew_Key) noexcept(noexcept(T(std::declval<T>())))
 			{
 				if (i_tNew_Key < m_tKey)
 				{
@@ -87,7 +129,12 @@ namespace xstdtsl
 					else
 						m_pRight->insert(i_tNew_Key);
 				}
+				return const_cast<tree_node *>(this);
 			}
+			///
+			/// find the node within this sub-tree that contains the given value
+			/// \returns a pointer to the node containing the value
+			///
 			virtual tree_node * search(T i_tKey) const noexcept
 			{
 				tree_node * pRet = nullptr;
@@ -99,6 +146,10 @@ namespace xstdtsl
 					pRet = m_pRight->search(i_tKey);
 				return pRet;
 			}
+			///
+			/// create an identical copy of the tree stating at the current node
+			/// \returns a pointer to the new tree
+			///
 
 			virtual tree_node * create_copy(const tree_node * i_pParent) noexcept(noexcept(T(std::declval<T>())))
 			{
@@ -112,8 +163,8 @@ namespace xstdtsl
 		}; 
 
 	protected:
-		tree_node * 		m_pRoot;
-		mutable read_write_mutex	m_mMutex;
+		tree_node * 		m_pRoot; ///< the root of the tree
+		mutable read_write_mutex	m_mMutex; ///< a read-write mutex for control of insertion, erasing, clearing, and searching the tree
 
 	public:
 		///
@@ -171,7 +222,7 @@ namespace xstdtsl
 		virtual void nl_insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
 		{
 			if (m_pRoot != nullptr)
-				m_pRoot->insert(i_tKey);
+				m_pRoot = m_pRoot->insert(i_tKey);
 			else
 				m_pRoot = new tree_node(nullptr,i_tKey);
 		}
@@ -197,12 +248,7 @@ namespace xstdtsl
 				pSearch_Result = m_pRoot->search(i_tKey);
 			if (pSearch_Result != nullptr) // make sure the key is in the tree
 			{
-//				std::cout << "found node to erase" << std::endl;
 				tree_node * pParent = pSearch_Result->get_parent();
-//				if (pParent != nullptr)
-//					std::cout << "has a parent" << std::endl;
-//				else
-//					std::cout << "is root node" << std::endl;
 
 				// perform a right pivot with delete
 				tree_node * pNew_Root = pSearch_Result->get_right();
@@ -260,6 +306,9 @@ namespace xstdtsl
 		}
 
 	public:
+		///
+		/// insert a new value into the key
+		///
 		virtual void insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
 		{
 			write_lock_guard cLock(m_mMutex);
@@ -283,6 +332,7 @@ namespace xstdtsl
 		}
 		///
 		/// determine if a given key is in the tree
+		/// \returns true if the key is in the tree; false otherwise
 		///
 		virtual bool has_key(T i_tKey) const noexcept
 		{
@@ -292,6 +342,7 @@ namespace xstdtsl
 		
 		///
 		/// determine if the tree is empty
+		/// \returns true if the tree is empty; false otherwise
 		///
 		virtual bool empty(void) const noexcept
 		{
@@ -319,6 +370,9 @@ namespace xstdtsl
 			const safe_binary_tree<T> * m_pTree; ///< the tree that is being iterated over
 			tree_node * m_pCursor; ///< a cursor pointing to the current data location within the tree
 		public:
+			///
+			/// void constructor (deleted)
+			///
 			iterator_base(void) = delete;
 			///
 			/// constructor that initializes the iterator and aquires a read lock on the tree
@@ -373,6 +427,9 @@ namespace xstdtsl
 			///
 			iterator_base & operator =( const iterator_base & i_cRHO) = delete;
 
+			///
+			/// set the position of the iterator to a selected point (beginning, end, or root of the tree)
+			///
 			virtual void set_position(start_point i_eStart_Point) noexcept
 			{
 				// set cursor
