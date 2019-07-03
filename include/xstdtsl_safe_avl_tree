@@ -30,19 +30,7 @@ namespace xstdtsl
 				m_nHeight = 1;
 			}
 		protected:
-			///
-			/// Find the balance of the node
-			///
-			int getBalance(void)  const noexcept
-			{
-				int nLeft_Height = 0;
-				int nRight_Height = 0;
-				if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
-					nLeft_Height  = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
-				if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
-					nRight_Height  = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
-				return nLeft_Height - nRight_Height; 
-			} 
+
 			///
 			/// rotate the tree based at the current node to the right
 			///
@@ -111,15 +99,16 @@ namespace xstdtsl
 				return pRet; 
 			} //function avl_tree_node *rotate_left(void)
 		public:
-			// Recursive function to insert a key 
-			// in the subtree rooted with node and 
-			// returns the new root of the subtree. 
+			///
+			/// insert a new node if the given key is non-duplicate; will perform tree-balance if necessary per AVL algorithm
+			/// \returns new root of tree
+			///
 			avl_tree_node* insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
 			{ 
 				avl_tree_node* pRet = const_cast<avl_tree_node*>(this);
 				if (i_tKey != safe_binary_tree<T>::tree_node::m_tKey)
 				{
-					// 1. Insert the new key/node as normal BST insert
+					// Insert the new key/node as normal BST insert
 					if (i_tKey < safe_binary_tree<T>::tree_node::m_tKey)
 					{
 						if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
@@ -134,7 +123,7 @@ namespace xstdtsl
 						else
 							safe_binary_tree<T>::tree_node::m_pRight = new avl_tree_node(this,i_tKey);
 					}
-					// 2. Update height of this node
+					// Update height of this node
 					int nLeft_Height = 0;
 					int nRight_Height = 0;
 					if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
@@ -142,16 +131,10 @@ namespace xstdtsl
 					if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
 						nRight_Height  = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
 					m_nHeight = 1 + std::max(nLeft_Height,nRight_Height);
+					int nBalance = nLeft_Height - nRight_Height; 
 
-					/* 3. Get the balance factor of this ancestor 
-						node to check whether this node became 
-						unbalanced */
-					int nBalance = getBalance(); 
-
-					// If this node becomes unbalanced, then 
-					// there are 4 cases 
-
-					if (nBalance > 1)
+					// if the node is unbalanced
+					if (nBalance > 1) // unbalanced to the left
 					{
 						// Left Right Case 
 						if (i_tKey > safe_binary_tree<T>::tree_node::m_tKey && safe_binary_tree<T>::tree_node::m_pLeft != nullptr) 
@@ -159,7 +142,7 @@ namespace xstdtsl
 						// otherwise Left Left Case 
 						pRet = rotate_right(); 
 					}
-					else if (nBalance < -1) 
+					else if (nBalance < -1)  // unbalanced to the right
 					{
 						// Right Left Case 
 						if (i_tKey < safe_binary_tree<T>::tree_node::m_tKey && safe_binary_tree<T>::tree_node::m_pRight != nullptr) 
