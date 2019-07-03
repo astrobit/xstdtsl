@@ -36,15 +36,7 @@ namespace xstdtsl
 			///
 			avl_tree_node *rotate_right(void) noexcept
 			{ 
-				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::m_pLeft; 
-				avl_tree_node * pRightOfLeft = pRet->m_pRight; 
-
-				// Perform rotation 
-				pRet->m_pRight = const_cast<avl_tree_node *>(this); 
-				safe_binary_tree<T>::tree_node::m_pLeft = pRightOfLeft; 
-				// update parents
-				pRet->m_pParent = safe_binary_tree<T>::tree_node::m_pParent;
-				safe_binary_tree<T>::tree_node::m_pParent = pRet;
+				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::rotate_right(); 
 
 				// Update heights 
 				int nLeftHeight = 0;
@@ -72,16 +64,8 @@ namespace xstdtsl
 			/// rotate the tree based at the current node to the left
 			///
 			avl_tree_node *rotate_left(void) noexcept
-			{ 
-				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::m_pRight; 
-				avl_tree_node * pLeftOfRight = pRet->m_pLeft; 
-
-				// Perform rotation 
-				pRet->m_pLeft = const_cast<avl_tree_node *>(this); 
-				safe_binary_tree<T>::tree_node::m_pRight = pLeftOfRight; 
-				// update parents
-				pRet->m_pParent = safe_binary_tree<T>::tree_node::m_pParent;
-				safe_binary_tree<T>::tree_node::m_pParent = pRet;
+			{
+				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::rotate_left(); 
 
 				// Update heights 
 				int nLeftHeight = 0;

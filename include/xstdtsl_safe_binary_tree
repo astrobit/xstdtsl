@@ -23,7 +23,50 @@ namespace xstdtsl
 			tree_node *				m_pLeft; ///< the left child of the node
 			tree_node *				m_pRight; ///< the right child of the node
 			const tree_node *		m_pParent; ///< the parent of the node
+		protected:
+			///
+			/// rotate the tree based at the current node to the right
+			///
+			virtual tree_node *rotate_right(void) noexcept
+			{ 
+				tree_node * pRet = const_cast<tree_node *>(this);
+				if (m_pLeft != nullptr)
+				{
+					tree_node * pRet = m_pLeft; 
+					tree_node * pRightOfLeft = pRet->m_pRight; 
 
+					// Perform rotation 
+					pRet->m_pRight = const_cast<tree_node *>(this); 
+					m_pLeft = pRightOfLeft; 
+					// update parents
+					pRet->m_pParent = m_pParent;
+					m_pParent = pRet;
+				} //if (m_pLeft != nullptr)
+				// Return new root 
+				return pRet; 
+			} //function tree_node *rotate_right(void)
+
+			///
+			/// rotate the tree based at the current node to the left
+			///
+			virtual tree_node *rotate_left(void) noexcept
+			{ 
+				tree_node * pRet = const_cast<tree_node *>(this);
+				if (m_pRight != nullptr)
+				{
+					pRet = m_pRight; 
+					tree_node * pLeftOfRight = pRet->m_pLeft; 
+
+					// Perform rotation 
+					pRet->m_pLeft = const_cast<tree_node *>(this); 
+					m_pRight = pLeftOfRight; 
+					// update parents
+					pRet->m_pParent = m_pParent;
+					m_pParent = pRet;
+				} // if (m_pRight != nullptr)
+				// Return new root 
+				return pRet; 
+			} //function tree_node *rotate_left(void)
 		public:
 			///
 			/// void constructor; create an empty, valueless node (i.e. no children or parent; key  constructed with default constructor)
