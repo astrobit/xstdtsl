@@ -42,6 +42,9 @@ namespace xstdtsl
 				// Perform rotation 
 				pRet->m_pRight = const_cast<avl_tree_node *>(this); 
 				safe_binary_tree<T>::tree_node::m_pLeft = pRightOfLeft; 
+				// update parents
+				pRet->m_pParent = safe_binary_tree<T>::tree_node::m_pParent;
+				safe_binary_tree<T>::tree_node::m_pParent = pRet;
 
 				// Update heights 
 				int nLeftHeight = 0;
@@ -75,7 +78,10 @@ namespace xstdtsl
 
 				// Perform rotation 
 				pRet->m_pLeft = const_cast<avl_tree_node *>(this); 
-				safe_binary_tree<T>::tree_node::m_pright = pLeftOfRight; 
+				safe_binary_tree<T>::tree_node::m_pRight = pLeftOfRight; 
+				// update parents
+				pRet->m_pParent = safe_binary_tree<T>::tree_node::m_pParent;
+				safe_binary_tree<T>::tree_node::m_pParent = pRet;
 
 				// Update heights 
 				int nLeftHeight = 0;
