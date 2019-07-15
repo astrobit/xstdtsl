@@ -2,6 +2,7 @@
 #ifndef __XSTDTSL_SAFE_BINARY_TREE_H
 #define __XSTDTSL_SAFE_BINARY_TREE_H
 
+#include <xstdtsl_enums.hpp>
 #include <xstdtsl_mutex>
 
 namespace xstdtsl
@@ -401,14 +402,6 @@ namespace xstdtsl
 		{
 		private:
 			bool m_bLock_Type_Write; ///< type of lock to hold on the tree; true indicates a write lock, false indicates a read lock
-		public:
-			/// 
-			/// enumeration to describe whether the iteration begins at the beginning or end of the tree
-			enum start_point {
-					beginning, ///< iteration will begin at the start of the tree
-					root, ///< iteration will begin at the root of the tree
-					end ///< iteration will begin at the end of the tree
-					};
 		protected:
 			const safe_binary_tree<T> * m_pTree; ///< the tree that is being iterated over
 			tree_node * m_pCursor; ///< a cursor pointing to the current data location within the tree
@@ -422,7 +415,7 @@ namespace xstdtsl
 			///
 			iterator_base(
 				const safe_binary_tree<T> & i_cTree, ///< the tree to iterate over
-				start_point i_eStart_Point, ///< the starting point to use within the tree (beginning or end)
+				binary_trees::start_point i_eStart_Point, ///< the starting point to use within the tree (beginning or end)
 				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
 				)  noexcept: m_pTree(&i_cTree)
 			{
@@ -473,13 +466,13 @@ namespace xstdtsl
 			///
 			/// set the position of the iterator to a selected point (beginning, end, or root of the tree)
 			///
-			virtual void set_position(start_point i_eStart_Point) noexcept
+			virtual void set_position(binary_trees::start_point i_eStart_Point) noexcept
 			{
 				// set cursor
 				m_pCursor = m_pTree->m_pRoot;
 				switch (i_eStart_Point)
 				{
-				case start_point::end:
+				case binary_trees::start_point::end:
 					{
 						tree_node * pCurr = m_pTree->m_pRoot;
 						while (pCurr != nullptr)
@@ -489,7 +482,7 @@ namespace xstdtsl
 						}
 					}
 					break;
-				case start_point::beginning:
+				case binary_trees::start_point::beginning:
 					{
 						tree_node * pCurr = m_pTree->m_pRoot;
 						while (pCurr != nullptr)
@@ -499,7 +492,7 @@ namespace xstdtsl
 						}
 					}
 					break;
-				case start_point::root:
+				case binary_trees::start_point::root:
 				default:
 					break;
 				}
@@ -685,7 +678,7 @@ namespace xstdtsl
 			///
 			read_iterator(
 				const safe_binary_tree<T> & i_cTree, ///< the tree to iterate over
-				enum iterator_base::start_point i_eStart_Point ///< the starting point to use within the tree (beginning or end)
+				enum binary_trees::start_point i_eStart_Point ///< the starting point to use within the tree (beginning or end)
 				)  noexcept : iterator_base(i_cTree,i_eStart_Point,false)
 			{
 			}
@@ -694,7 +687,7 @@ namespace xstdtsl
 			///
 			read_iterator(
 				const read_iterator & i_cIterator ///< the iterator to copy
-				)  noexcept : iterator_base(*i_cIterator.m_pTree,iterator_base::start_point::beginning,false)
+				)  noexcept : iterator_base(*i_cIterator.m_pTree,binary_trees::start_point::beginning,false)
 			{
 				iterator_base::m_pCursor = i_cIterator.m_pCursor;
 			}
