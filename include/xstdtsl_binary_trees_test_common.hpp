@@ -700,12 +700,60 @@ namespace tests
 		treetype cTI;
 		std::cout << "perform ordered insert into tree: will require tree to balance" << std::endl;
 		tree_tree::insert_element<treetype>(cTI,35);
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 35);
+		}
 		tree_tree::insert_element<treetype>(cTI,30);
-		tree_tree::insert_element<treetype>(cTI,25);
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 35);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+		}
+		tree_tree::insert_element<treetype>(cTI,25); // right rotate
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 25);
+		}
 		tree_tree::insert_element<treetype>(cTI,20);
-		tree_tree::insert_element<treetype>(cTI,15);
-		tree_tree::insert_element<treetype>(cTI,10);
-		tree_tree::insert_element<treetype>(cTI,5);
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 25);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+		}
+		tree_tree::insert_element<treetype>(cTI,15); // right rotate at 25
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 15);
+		}
+		tree_tree::insert_element<treetype>(cTI,10); // rotation at root
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 15);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 10);
+		}
+		tree_tree::insert_element<treetype>(cTI,5); // rotation at 15
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 10);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 5);
+		}
 		tree_tree::confirm_has_key<treetype>(cTI,5);
 		tree_tree::confirm_has_key<treetype>(cTI,10);
 		tree_tree::confirm_has_key<treetype>(cTI,15);
@@ -713,6 +761,77 @@ namespace tests
 		tree_tree::confirm_has_key<treetype>(cTI,25);
 		tree_tree::confirm_has_key<treetype>(cTI,30);
 		tree_tree::confirm_has_key<treetype>(cTI,35);
+		std::cout << "destruct tree" << std::endl;
+	}
+
+	template<class treetype, class read_iterator> void avl_balancing_3(void)
+	{
+		std::cout << "-----===== AVL tree balancing tests #3 =====-----" << std::endl;
+		std::cout << "void constructor" << std::endl;
+		treetype cTI;
+		std::cout << "perform ordered insert into tree: will require tree to balance" << std::endl;
+		tree_tree::insert_element<treetype>(cTI, 35);
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 35);
+		}
+		tree_tree::insert_element<treetype>(cTI, 30);
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 35);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+		}
+		tree_tree::insert_element<treetype>(cTI, 25); // right rotate
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 25);
+		}
+		tree_tree::insert_element<treetype>(cTI, 20);
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 25);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+		}
+		tree_tree::insert_element<treetype>(cTI, 15); // right rotate at 25
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 30);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 15);
+		}
+		tree_tree::insert_element<treetype>(cTI, 10); // rotation at root
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 15);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 10);
+		}
+		tree_tree::insert_element<treetype>(cTI, 5); // rotation at 15
+		{
+			read_iterator cIter(cTI, xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 20);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 10);
+			tree_read_iterator::move_iter_left<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 5);
+		}
+		tree_tree::confirm_has_key<treetype>(cTI, 5);
+		tree_tree::confirm_has_key<treetype>(cTI, 10);
+		tree_tree::confirm_has_key<treetype>(cTI, 15);
+		tree_tree::confirm_has_key<treetype>(cTI, 20);
+		tree_tree::confirm_has_key<treetype>(cTI, 25);
+		tree_tree::confirm_has_key<treetype>(cTI, 30);
+		tree_tree::confirm_has_key<treetype>(cTI, 35);
 		std::cout << "destruct tree" << std::endl;
 	}
 
