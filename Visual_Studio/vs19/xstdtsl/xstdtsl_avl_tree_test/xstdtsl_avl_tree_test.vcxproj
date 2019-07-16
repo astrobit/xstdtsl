@@ -136,6 +136,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\include\xstdtsl_avl_tree_test.hpp" />
+    <ClInclude Include="..\..\..\..\include\xstdtsl_binary_trees_test_common.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\xstdtsl_avl_tree_test.cpp" />

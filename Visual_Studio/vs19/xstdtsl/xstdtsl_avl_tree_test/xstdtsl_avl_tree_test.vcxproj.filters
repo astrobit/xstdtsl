@@ -18,6 +18,9 @@
     <ClInclude Include="..\..\..\..\include\xstdtsl_avl_tree_test.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\include\xstdtsl_binary_trees_test_common.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\src\xstdtsl_avl_tree_test.cpp">

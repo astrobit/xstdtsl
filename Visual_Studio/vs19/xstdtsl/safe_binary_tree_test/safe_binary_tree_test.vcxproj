@@ -136,6 +136,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\include\xstdtsl_binary_trees_test_common.hpp" />
     <ClInclude Include="..\..\..\..\include\xstdtsl_binary_tree_test.hpp" />
   </ItemGroup>
   <ItemGroup>
