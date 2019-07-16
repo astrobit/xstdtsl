@@ -1,151 +1,1000 @@
 #pragma once
-#ifndef XSTDTSL_SAFE_AVL_TREE_H
-#define XSTDTSL_SAFE_AVL_TREE_H
-#include <xstdtsl_safe_binary_tree>
+#ifndef __XSTDTSL_SAFE_AVL_TREE_H
+#define __XSTDTSL_SAFE_AVL_TREE_H
+
+#include <algorithm>
+#include <xstdtsl_enums.hpp>
+#include <xstdtsl_mutex>
+
 namespace xstdtsl
 {
-	///
-	/// 
-	///
-	template <class T> class safe_avl_tree : public safe_binary_tree<T>
-	{
-	private:
-		class avl_tree_node : public safe_binary_tree<T>::tree_node
-		{
-		private:
-			int		m_nHeight;
-		public:
-			///
-			/// void constructor; creates node with no parent or children and default constructed key
-			///
-			avl_tree_node(void)  noexcept(noexcept(T(std::declval<T>()))) : safe_binary_tree<T>::tree_node()
-			{
-				m_nHeight = 1;
-			}
-			///
-			/// creates node with the given parent and specified constructed key; children will be null
-			///
-			avl_tree_node(avl_tree_node * i_pParent, T i_tKey) noexcept(noexcept(T(std::declval<T>()))) : safe_binary_tree<T>::tree_node(i_pParent,i_tKey)
-			{
-				m_nHeight = 1;
-			}
-		protected:
 
+	///
+	/// a basic binary tree that doesn't self-balance
+	///
+	template <class T> class safe_avl_tree
+	{
+	protected:
+		///
+		/// a node within the tree
+		///
+		class tree_node
+		{ 
+		protected: 
+			T 						m_tKey; ///< the value of the node
+			tree_node *				m_pLeft; ///< the left child of the node
+			tree_node *				m_pRight; ///< the right child of the node
+			tree_node *				m_pParent; ///< the parent of the node
+			int						m_nHeight; ///< the height of the node below this node
+		protected:
+			void update_height(void)
+			{
+				// Update height of this node
+				int nLeft_Height = 0;
+				int nRight_Height = 0;
+				if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr)
+					nLeft_Height  = safe_avl_tree<T>::tree_node::m_pLeft->m_nHeight;
+				if (safe_avl_tree<T>::tree_node::m_pRight != nullptr)
+					nRight_Height  = safe_avl_tree<T>::tree_node::m_pRight->m_nHeight;
+				m_nHeight = 1 + std::max(nLeft_Height,nRight_Height);
+			}
 			///
 			/// rotate the tree based at the current node to the right
 			///
-			avl_tree_node *rotate_right(void) noexcept
+			virtual tree_node *rotate_right(void) noexcept
 			{ 
-				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::rotate_right(); 
+				tree_node * pRet = const_cast<tree_node *>(this);
+				if (m_pLeft != nullptr)
+				{
+					pRet = m_pLeft; 
+					tree_node * pRightOfLeft = pRet->m_pRight; 
 
-				// Update heights 
-				int nLeftHeight = 0;
-				int nRightHeight = 0;
-				if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
-					nLeftHeight = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
-				if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
-					nRightHeight = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
+					// Perform rotation 
+					pRet->m_pRight = const_cast<tree_node *>(this); 
+					m_pLeft = pRightOfLeft; 
+					// update link from parent
+					if (m_pParent != nullptr)
+					{
+						if (m_pParent->m_pLeft == this)
+							m_pParent->m_pLeft = pRet;
+						else
+							m_pParent->m_pRight = pRet;
+					}
 
-				int nLeftLeftHeight = 0;
-				int nLeftRightHeight = 0;
-				if (pRet->m_pLeft != nullptr)
-					nLeftLeftHeight = pRet->m_pLeft->m_nHeight;
-				if (pRet->m_pRight != nullptr)
-					nLeftRightHeight = pRet->m_pRight->m_nHeight;
+					// update parents
+					pRet->m_pParent = m_pParent;
+					m_pParent = pRet;
 
-				m_nHeight = 1 + std::max(nLeftHeight, nRightHeight); 
-				pRet->m_nHeight = 1 + std::max(nLeftLeftHeight,nLeftRightHeight);
-
+					// update height
+					update_height();
+					pRet->update_height();
+				} //if (m_pLeft != nullptr)
 				// Return new root 
 				return pRet; 
-			} 
+			} //function tree_node *rotate_right(void)
 
 			///
 			/// rotate the tree based at the current node to the left
 			///
-			avl_tree_node *rotate_left(void) noexcept
-			{
-				avl_tree_node * pRet = safe_binary_tree<T>::tree_node::rotate_left(); 
+			virtual tree_node *rotate_left(void) noexcept
+			{ 
+				tree_node * pRet = const_cast<tree_node *>(this);
+				if (m_pRight != nullptr)
+				{
+					pRet = m_pRight; 
+					tree_node * pLeftOfRight = pRet->m_pLeft; 
 
-				// Update heights 
-				int nLeftHeight = 0;
-				int nRightHeight = 0;
-				if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
-					nLeftHeight = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
-				if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
-					nRightHeight = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
+					// Perform rotation 
+					pRet->m_pLeft = const_cast<tree_node *>(this); 
+					m_pRight = pLeftOfRight; 
+					// update link from parent
+					if (m_pParent != nullptr)
+					{
+						if (m_pParent->m_pLeft == this)
+							m_pParent->m_pLeft = pRet;
+						else
+							m_pParent->m_pRight = pRet;
+					}
 
-				int nLeftLeftHeight = 0;
-				int nLeftRightHeight = 0;
-				if (pRet->m_pLeft != nullptr)
-					nLeftLeftHeight = pRet->m_pLeft->m_nHeight;
-				if (pRet->m_pRight != nullptr)
-					nLeftRightHeight = pRet->m_pRight->m_nHeight;
+					// update parents
+					pRet->m_pParent = m_pParent;
+					m_pParent = pRet;
 
-				m_nHeight = 1 + std::max(nLeftHeight, nRightHeight); 
-				pRet->m_nHeight = 1 + std::max(nLeftLeftHeight,nLeftRightHeight);
+					// update height
+					update_height();
+					pRet->update_height();
 
+				} // if (m_pRight != nullptr)
 				// Return new root 
 				return pRet; 
-			} //function avl_tree_node *rotate_left(void)
+			} //function tree_node *rotate_left(void)
 		public:
+			///
+			/// void constructor; create an empty, valueless node (i.e. no children or parent; key  constructed with default constructor)
+			///
+			tree_node(void) noexcept(noexcept(T(std::declval<T>()))) : m_tKey(), m_pParent(nullptr), m_pLeft(nullptr), m_pRight(nullptr), m_nHeight(1)
+			{
+				;
+			}
+			///
+			/// create a node with no children and the given parent and value
+			///
+			tree_node(tree_node * i_pParent, T i_tKey) noexcept(noexcept(T(std::declval<T>()))) : m_tKey(i_tKey), m_pParent(i_pParent), m_pLeft(nullptr), m_pRight(nullptr), m_nHeight(1)
+			{
+				;	
+			}
+			///
+			/// destructor: destroy the left children then the right children of the current node
+			///
+			virtual ~tree_node(void) noexcept(noexcept(std::declval<T>().~T()))
+			{
+				if (m_pLeft != nullptr)
+					delete m_pLeft;
+				m_pLeft = nullptr;
+				if (m_pRight != nullptr)
+					delete m_pRight;
+				m_pRight = nullptr;
+			}
+
+			///
+			/// get the value of the current node
+			///
+			virtual T get_key(void) const noexcept
+			{
+				return m_tKey;
+			}
+			///
+			/// get the left child of the current node
+			/// \returns a pointer to the left child, or nullptr if the node does not have a right child
+			///
+			virtual tree_node * get_left(void) const noexcept
+			{
+				return m_pLeft;
+			}
+			///
+			/// set the left child of the current node
+			///
+			virtual void set_left(tree_node * i_pNew_Left) noexcept
+			{
+				m_pLeft = i_pNew_Left;
+			}
+
+			///
+			/// get the right child of the current node
+			/// \returns a pointer to the right child, or nullptr if the node does not have a right child
+			///
+			virtual tree_node * get_right(void) const noexcept
+			{
+				return m_pRight;
+			}
+			///
+			/// set the right child of the current node
+			///
+			virtual void set_right(tree_node * i_pNew_Right) noexcept
+			{
+				m_pRight = i_pNew_Right;
+			}
+			///
+			/// get the parent of the current node
+			/// \returns a pointer to the parent, or nullptr if the node is root of the tree
+			///
+			virtual tree_node * get_parent(void) const noexcept
+			{
+				return const_cast<tree_node *>(m_pParent);
+			}
+
+			///
+			/// set the parent of the current node
+			///
+			virtual void set_parent(tree_node * i_pNew_Parent) noexcept
+			{
+				m_pParent = i_pNew_Parent;
+			}
+			int get_balance(void)
+			{
+				// Update height of this node
+				int nLeft_Height = 0;
+				int nRight_Height = 0;
+				if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr)
+					nLeft_Height  = safe_avl_tree<T>::tree_node::m_pLeft->m_nHeight;
+				if (safe_avl_tree<T>::tree_node::m_pRight != nullptr)
+					nRight_Height  = safe_avl_tree<T>::tree_node::m_pRight->m_nHeight;
+				return nLeft_Height - nRight_Height; 
+			}
+			tree_node* balance(void)
+			{
+				tree_node * pRet = const_cast<tree_node*>(this);
+				int nBalance = get_balance();
+				//std::cout << "balance after insert at " << safe_avl_tree<T>::tree_node::m_tKey << " is " << nBalance << ". Left height is " << nLeft_Height << " and right height is " << nRight_Height << std::endl;
+
+				// if the node is unbalanced
+				if (nBalance > 1) // unbalanced to the left
+				{
+					// Left Right Case
+					if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr && safe_avl_tree<T>::tree_node::m_pLeft->get_balance() == -1)
+					{
+						//std::cout << "left-right left rotate " << std::endl;
+						safe_avl_tree<T>::tree_node::m_pLeft->rotate_left(); 
+					}
+					// otherwise Left Left Case 
+					//std::cout << "left unbalance right rotate " << std::endl;
+					pRet = rotate_right(); 
+				}
+				else if (nBalance < -1)  // unbalanced to the right
+				{
+					// Right Left Case 
+					if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr && safe_avl_tree<T>::tree_node::m_pLeft->get_balance() == 1)
+					{
+						//std::cout << "right-left right rotate " << std::endl;
+						safe_avl_tree<T>::tree_node::m_pRight->rotate_right(); 
+					}
+					// otherwise Right Right Case 
+					//std::cout << "right unbalance left rotate " << std::endl;
+					pRet = rotate_left(); 
+				}
+				return pRet;
+			}
 			///
 			/// insert a new node if the given key is non-duplicate; will perform tree-balance if necessary per AVL algorithm
 			/// \returns new root of tree
 			///
-			avl_tree_node* insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
+			tree_node* insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
 			{ 
-				avl_tree_node* pRet = const_cast<avl_tree_node*>(this);
-				if (i_tKey != safe_binary_tree<T>::tree_node::m_tKey)
+				tree_node* pRet = const_cast<tree_node*>(this);
+				if (i_tKey != safe_avl_tree<T>::tree_node::m_tKey)
 				{
 					// Insert the new key/node as normal BST insert
-					if (i_tKey < safe_binary_tree<T>::tree_node::m_tKey)
+					if (i_tKey < safe_avl_tree<T>::tree_node::m_tKey)
 					{
-						if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
-							safe_binary_tree<T>::tree_node::m_pLeft = safe_binary_tree<T>::tree_node::m_pLeft->insert(i_tKey);
+						if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr)
+							safe_avl_tree<T>::tree_node::m_pLeft = safe_avl_tree<T>::tree_node::m_pLeft->insert(i_tKey);
 						else
-							safe_binary_tree<T>::tree_node::m_pLeft = new avl_tree_node(this,i_tKey);
+							safe_avl_tree<T>::tree_node::m_pLeft = new tree_node(this,i_tKey);
 					}
-					else if (i_tKey > safe_binary_tree<T>::tree_node::m_tKey)
+					else if (i_tKey > safe_avl_tree<T>::tree_node::m_tKey)
 					{
-						if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
-							safe_binary_tree<T>::tree_node::m_pRight = safe_binary_tree<T>::tree_node::m_pRight->insert(i_tKey);
+						if (safe_avl_tree<T>::tree_node::m_pRight != nullptr)
+							safe_avl_tree<T>::tree_node::m_pRight = safe_avl_tree<T>::tree_node::m_pRight->insert(i_tKey);
 						else
-							safe_binary_tree<T>::tree_node::m_pRight = new avl_tree_node(this,i_tKey);
+							safe_avl_tree<T>::tree_node::m_pRight = new tree_node(this,i_tKey);
 					}
-					// Update height of this node
-					int nLeft_Height = 0;
-					int nRight_Height = 0;
-					if (safe_binary_tree<T>::tree_node::m_pLeft != nullptr)
-						nLeft_Height  = safe_binary_tree<T>::tree_node::m_pLeft->m_nHeight;
-					if (safe_binary_tree<T>::tree_node::m_pRight != nullptr)
-						nRight_Height  = safe_binary_tree<T>::tree_node::m_pRight->m_nHeight;
-					m_nHeight = 1 + std::max(nLeft_Height,nRight_Height);
-					int nBalance = nLeft_Height - nRight_Height; 
+					update_height();
+					pRet = balance();
+				}
+				return const_cast<tree_node *>(pRet);
+			}
+			///
+			/// find the node within this sub-tree that contains the given value
+			/// \returns a pointer to the node containing the value
+			///
+			virtual tree_node * search(T i_tKey) const noexcept
+			{
+				tree_node * pRet = nullptr;
+				if (m_tKey == i_tKey)
+					pRet = const_cast<tree_node *>(this);
+				else if (i_tKey < m_tKey && m_pLeft != nullptr)
+					pRet = m_pLeft->search(i_tKey);
+				else if (i_tKey > m_tKey && m_pRight != nullptr)
+					pRet = m_pRight->search(i_tKey);
+				return pRet;
+			}
+			///
+			/// create an identical copy of the tree stating at the current node
+			/// \returns a pointer to the new tree
+			///
 
-					// if the node is unbalanced
-					if (nBalance > 1) // unbalanced to the left
+			virtual tree_node * create_copy(tree_node * i_pParent) const noexcept(noexcept(T(std::declval<T>())))
+			{
+				tree_node * pRet = new tree_node(i_pParent,m_tKey);
+				if (m_pLeft != nullptr)
+					pRet->m_pLeft = m_pLeft->create_copy(pRet);
+				if (m_pRight != nullptr)
+					pRet->m_pRight = m_pRight->create_copy(pRet);
+				return pRet;
+			}
+		}; 
+
+	protected:
+		tree_node * 		m_pRoot; ///< the root of the tree
+		mutable read_write_mutex	m_mMutex; ///< a read-write mutex for control of insertion, erasing, clearing, and searching the tree
+
+	public:
+		///
+		/// void constructor; creates an empty tree; blocking(write)
+		///
+		safe_avl_tree(void) noexcept
+		{
+			m_pRoot = nullptr;
+		}
+		///
+		/// copy constructor; creates a tree that is identical to an existing tree; blocking(read/write)
+		///
+		safe_avl_tree(const safe_avl_tree<T> & i_cRHO) noexcept(noexcept(T(std::declval<T>())))
+		{
+			write_lock_guard cLock(m_mMutex);
+			m_pRoot = nullptr;
+			nl_copy(i_cRHO);
+		}
+		///
+		/// destructor; destroys the tree; blocking(write)
+		///
+		virtual ~safe_avl_tree(void) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			write_lock_guard cLock(m_mMutex);
+			if (m_pRoot != nullptr)
+				delete m_pRoot;
+			m_pRoot = nullptr;
+		}
+		///
+		/// copy constructor; creates a tree that is identical to an existing tree; blocking(read/write)
+		///
+		safe_avl_tree & operator=(const safe_avl_tree<T> & i_cRHO) noexcept(noexcept(T(std::declval<T>())))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_copy(i_cRHO);
+			return *this;
+		}
+
+	protected:
+		///
+		/// create a copy of an existing tree; blocking(read on tree to copy)
+		///
+		virtual void nl_copy(const safe_avl_tree<T> & i_cRHO) noexcept(noexcept(T(std::declval<T>())))
+		{
+			read_lock_guard cLock(i_cRHO.m_mMutex);
+			if (m_pRoot != nullptr)
+				delete m_pRoot;
+			m_pRoot = nullptr;
+			if (i_cRHO.m_pRoot != nullptr)
+				m_pRoot = i_cRHO.m_pRoot->create_copy(nullptr);
+		}
+		///
+		/// insert a potentially new key into the tree
+		///
+		virtual void nl_insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
+		{
+			if (m_pRoot != nullptr)
+				m_pRoot = m_pRoot->insert(i_tKey);
+			else
+				m_pRoot = new tree_node(nullptr,i_tKey);
+		}
+		///
+		/// determine if a key exists within the tree; non-blocking
+		/// \returns true if the key exists within the tree; false otherwise
+		///
+		virtual bool nl_has_key(T i_tKey) const noexcept
+		{
+			tree_node * pSearch_Result = nullptr;
+			if (m_pRoot != nullptr)
+				pSearch_Result = m_pRoot->search(i_tKey);
+			return (pSearch_Result != nullptr);
+		}
+		
+		///
+		/// erase a node in the tree based on its key
+		///
+		virtual void nl_erase(T i_tKey) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			tree_node * pSearch_Result = nullptr;
+			if (m_pRoot != nullptr)
+				pSearch_Result = m_pRoot->search(i_tKey);
+			if (pSearch_Result != nullptr) // make sure the key is in the tree
+			{
+				tree_node * pParent = pSearch_Result->get_parent();
+
+				// perform a right pivot with delete
+				tree_node * pNew_Root = pSearch_Result->get_right();
+				if (pNew_Root != nullptr)
+				{
+					// traverse the left children of the new root to find where to place the left children
+					tree_node * pCurr = pNew_Root->get_left();
+					tree_node * pLast = pNew_Root;
+					while (pCurr != nullptr)
 					{
-						// Left Right Case 
-						if (i_tKey > safe_binary_tree<T>::tree_node::m_tKey && safe_binary_tree<T>::tree_node::m_pLeft != nullptr) 
-							safe_binary_tree<T>::tree_node::m_pLeft = safe_binary_tree<T>::tree_node::m_pLeft->rotate_left(); 
-						// otherwise Left Left Case 
-						pRet = rotate_right(); 
+						pLast = pCurr;
+						pCurr = pCurr->get_left();
 					}
-					else if (nBalance < -1)  // unbalanced to the right
+					// add the left children of the deleted node to the left children of the identified edge
+					pLast->set_left(pSearch_Result->get_left());
+				}
+				else // no right children; use the left child as the new root
+				{
+					pNew_Root = pSearch_Result->get_left();
+				}
+				// delete the erased node
+				pSearch_Result->set_left(nullptr);
+				pSearch_Result->set_right(nullptr);
+				delete pSearch_Result;
+
+				// place the new root and set its parent
+				if (pNew_Root != nullptr)
+					pNew_Root->set_parent(pParent);
+				if (pParent != nullptr)
+				{
+					if (i_tKey < pParent->get_key()) // replace the left child
+						pParent->set_left(pNew_Root);
+					else
+						pParent->set_right(pNew_Root);
+					// check balance
+				}
+				else /// no parent and the key exists -- we are erasing the root of the tree
+					m_pRoot = pNew_Root;
+
+//				while (pParent != nullptr)
+			}
+		}
+		///
+		/// clear the tree; non-blocking
+		///
+		virtual void nl_clear(void) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			delete m_pRoot;
+			m_pRoot = nullptr;
+		}
+
+		///
+		/// determine if the tree is empty
+		///
+		virtual bool nl_empty(void) const noexcept
+		{
+			return m_pRoot == nullptr;
+		}
+
+	public:
+		///
+		/// insert a new value into the key
+		///
+		virtual void insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_insert(i_tKey);
+		}
+		///
+		/// erases a given key from the tree
+		///
+		virtual void erase(T i_tKey) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_erase(i_tKey);
+		}
+		///
+		/// deletes all nodes in the tree
+		///
+		virtual void clear(void) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_clear();
+		}
+		///
+		/// determine if a given key is in the tree
+		/// \returns true if the key is in the tree; false otherwise
+		///
+		virtual bool has_key(T i_tKey) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_has_key(i_tKey);
+		}
+		
+		///
+		/// determine if the tree is empty
+		/// \returns true if the tree is empty; false otherwise
+		///
+		virtual bool empty(void) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_empty();
+		}
+
+			
+		///
+		/// base class for tree iterators
+		///
+		class iterator_base
+		{
+		private:
+			bool m_bLock_Type_Write; ///< type of lock to hold on the tree; true indicates a write lock, false indicates a read lock
+		protected:
+			const safe_avl_tree<T> * m_pTree; ///< the tree that is being iterated over
+			tree_node * m_pCursor; ///< a cursor pointing to the current data location within the tree
+		public:
+			///
+			/// void constructor (deleted)
+			///
+			iterator_base(void) = delete;
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree
+			///
+			iterator_base(
+				const safe_avl_tree<T> & i_cTree, ///< the tree to iterate over
+				binary_trees::start_point i_eStart_Point, ///< the starting point to use within the tree (beginning or end)
+				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
+				)  noexcept: m_pTree(&i_cTree)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_lock();
+				else
+					m_pTree->m_mMutex.read_lock();
+				set_position(i_eStart_Point);
+			}
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree
+			///
+			iterator_base(
+				const safe_avl_tree<T> &i_cTree, ///< the tree to iterate over
+				tree_node * i_pCursor, ///< the starting point to use within the tree
+				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
+				)  noexcept: m_pTree(&i_cTree)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				m_pTree = &i_cTree;
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_lock();
+				else
+					m_pTree->m_mMutex.read_lock();
+				m_pCursor = i_pCursor;
+			}
+			///
+			/// copy constructor (deleted)
+			///
+			iterator_base( const iterator_base & i_cRHO) = delete;
+
+			///
+			/// destructor: releases lock
+			///
+			virtual ~iterator_base(void)
+			{
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_unlock();
+				else
+					m_pTree->m_mMutex.read_unlock();
+			}
+			///
+			/// assign operator (deleted)
+			///
+			iterator_base & operator =( const iterator_base & i_cRHO) = delete;
+
+			///
+			/// set the position of the iterator to a selected point (beginning, end, or root of the tree)
+			///
+			virtual void set_position(binary_trees::start_point i_eStart_Point) noexcept
+			{
+				// set cursor
+				m_pCursor = m_pTree->m_pRoot;
+				switch (i_eStart_Point)
+				{
+				case binary_trees::start_point::end:
 					{
-						// Right Left Case 
-						if (i_tKey < safe_binary_tree<T>::tree_node::m_tKey && safe_binary_tree<T>::tree_node::m_pRight != nullptr) 
-							safe_binary_tree<T>::tree_node::m_pRight = safe_binary_tree<T>::tree_node::m_pRight->rotate_right(); 
-						// otherwise Right Right Case 
-						pRet = rotate_left(); 
+						tree_node * pCurr = m_pTree->m_pRoot;
+						while (pCurr != nullptr)
+						{
+							m_pCursor = pCurr;
+							pCurr = pCurr->get_right();
+						}
+					}
+					break;
+				case binary_trees::start_point::beginning:
+					{
+						tree_node * pCurr = m_pTree->m_pRoot;
+						while (pCurr != nullptr)
+						{
+							m_pCursor = pCurr;
+							pCurr = pCurr->get_left();
+						}
+					}
+					break;
+				case binary_trees::start_point::root:
+				default:
+					break;
+				}
+			}
+			///
+			/// up ; moves the iterator to the parent of the current node
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & up(void) noexcept
+			{
+				if (m_pCursor != nullptr)
+					m_pCursor = m_pCursor->get_parent();
+				return *this;
+			}
+
+			///
+			/// moves the iterator to the left child of the current node
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & left(void) noexcept
+			{
+				if (m_pCursor != nullptr)
+					m_pCursor = m_pCursor->get_left();
+				return *this;
+			}
+			
+			///
+			/// moves the iterator to the right child of the current node
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & right(void) noexcept
+			{
+				if (m_pCursor != nullptr)
+					m_pCursor = m_pCursor->get_right();
+				return *this;
+			}
+
+			///
+			/// pre-increment operator; advances the iterator within the tree; will not advance past the end of the tree
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator ++ (void) noexcept
+			{
+				if (m_pCursor != nullptr)
+				{
+					if (m_pCursor->get_right() != nullptr)
+					{
+						m_pCursor = m_pCursor->get_right();
+						tree_node * pLeft = m_pCursor->get_left();
+						while (pLeft != nullptr)
+						{
+							m_pCursor = pLeft;
+							pLeft = m_pCursor->get_left();
+						}
+					}
+					else
+					{
+						tree_node * pChild = m_pCursor;
+						tree_node * pParent = m_pCursor->get_parent();
+						while (pParent != nullptr && pParent->get_right() == pChild)
+						{
+							pChild = pParent;
+							pParent = pParent->get_parent();
+						}
+						m_pCursor = pParent;
 					}
 				}
+				return *this;
+			}
+			///
+			/// pre-decrement operator; rewinds the iterator within the tree; will not rewind past the start of the tree
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator -- (void) noexcept
+			{
+				if (m_pCursor != nullptr)
+				{
+					if (m_pCursor->get_left() != nullptr)
+					{
+						m_pCursor = m_pCursor->get_left();
+						tree_node * pRight = m_pCursor->get_right();
+						while (pRight != nullptr)
+						{
+							m_pCursor = pRight;
+							pRight = m_pCursor->get_right();
+						}
+					}
+					else
+					{
+						tree_node * pChild = m_pCursor;
+						tree_node * pParent = m_pCursor->get_parent();
+						while (pParent != nullptr && pParent->get_left() == pChild)
+						{
+							pChild = pParent;
+							pParent = pParent->get_parent();
+						}
+						m_pCursor = pParent;
+					}
+				}
+				return *this;
+			}
+			///
+			/// add-assign operator; advances the iterator within the tree; will not advance past the end of the tree or prior to the start of the data
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator += (int i_nValue) noexcept
+			{
+				size_t nCount = std::abs(i_nValue);
+				for (size_t nI = 0; m_pCursor != nullptr && nI < nCount; nI++)
+				{
+					if (i_nValue < 0)
+						--(*this);
+					else
+						++(*this);
+				}
+				return *this;
+			}
+			///
+			/// subtract-assign operator; advances the iterator within the tree; will not advance past the end of the tree or prior to the start of the data
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator -= (int i_nValue) noexcept
+			{
+				size_t nCount = std::abs(i_nValue);
+				for (size_t nI = 0; m_pCursor != nullptr && nI < nCount; nI++)
+				{
+					if (i_nValue < 0)
+						++(*this);
+					else
+						--(*this);
+				}
+				return *this;
+			}
+			///
+			/// equality operator
+			/// \returns true if both iterators are pointing to the same tree and are pointing to the same location within the tree
+			///
+			virtual bool operator ==(const iterator_base & i_cRHO) noexcept
+			{
+				return (m_pTree == i_cRHO.m_pTree && m_pCursor == i_cRHO.m_pCursor);
+			}
+			///
+			/// inequality operator
+			/// \returns true if the iterators are not pointing to the same tree or are not pointing to the same location within one tree
+			///
+			virtual bool operator !=(const iterator_base & i_cRHO) noexcept
+			{
+				return (m_pTree != i_cRHO.m_pTree || m_pCursor != i_cRHO.m_pCursor);
+			}
+			///
+			/// retrive the value at the current location of the iterator; if the iterator is not pointing to valid data will return type T with default contructor
+			/// \returns the data at the current location of the iterator if the iterator is valid
+			///
+			virtual T load(void) noexcept(noexcept(T()))
+			{
+				T tRet = T();
+				if (m_pCursor != nullptr)
+					tRet = m_pCursor->get_key();
+				return tRet;
+			}
+			///
+			/// determine if the iterator is pointing to a valid place within the tree
+			/// \returns true if the iterator is valid; false otherwise
+			///
+			virtual bool is_valid(void) noexcept
+			{
+				return m_pCursor != nullptr;
+			}
+		};
 
-				// return the new root
-				return pRet; 
-			} //function avl_tree_node* insert(T i_tKey)
-		}; // class avl_tree_node
-	}; // class safe_avl_tree
-} // namespace xstdtsl
-#endif //#ifndef XSTDTSL_SAFE_AVL_TREE_H
+		///
+		/// class for iterating through a tree; unlike typical iterators this class is scoped and holds a read lock on the tree to ensure that the tree does not change data or size during iteration
+		///
+		class read_iterator : public iterator_base
+		{
+		public:
+			///
+			/// default constructor (deleted)
+			///
+			read_iterator(void) = delete;
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree; blocking (read)
+			///
+			read_iterator(
+				const safe_avl_tree<T> & i_cTree, ///< the tree to iterate over
+				enum binary_trees::start_point i_eStart_Point ///< the starting point to use within the tree (beginning or end)
+				)  noexcept : iterator_base(i_cTree,i_eStart_Point,false)
+			{
+			}
+			///
+			/// copy constructor; aquires an additional read lock on the tree; blocking (read)
+			///
+			read_iterator(
+				const read_iterator & i_cIterator ///< the iterator to copy
+				)  noexcept : iterator_base(*i_cIterator.m_pTree,binary_trees::start_point::beginning,false)
+			{
+				iterator_base::m_pCursor = i_cIterator.m_pCursor;
+			}
+			///
+			/// assignment operator; releases lock on existing tree and aquires a read lock on the tree that the right hand iterator refers to; blocking (read)
+			///
+			read_iterator & operator = (
+					const read_iterator & i_cIterator ///< the iterator to copy
+				) noexcept
+			{
+				iterator_base::m_pTree->m_mMutex.read_unlock();
+				iterator_base::m_pTree = i_cIterator.m_pTree;
+				iterator_base::m_pTree->m_mMutex.read_lock();
+				iterator_base::m_pCursor = i_cIterator.m_pCursor;
+				return *this;
+			}
+
+			///
+			/// post-increment operator; advances the iterator within the tree; will not advance past the end of the tree
+			/// \returns a reference to this iterator
+			///
+			read_iterator operator ++ (int i_nValue) noexcept
+			{
+				read_iterator cRet(*this);
+				iterator_base::operator++();
+				return cRet;
+			}
+			///
+			/// post-decrement operator; rewinds the iterator within the tree; will not rewind past the start of the tree
+			/// \returns a reference to this iterator
+			///
+			read_iterator operator -- (int i_nValue) noexcept
+			{
+				read_iterator cRet(*this);
+				iterator_base::operator--();
+				return cRet;
+			}
+		};
+
+
+		class control_base
+		{
+		private:
+			bool m_bLock_Type_Write; // type of lock to hold on the tree; true indicates a write lock, false indicates a read lock
+		protected:
+			safe_avl_tree<T> * m_pTree; ///< reference to the tree to control
+		public:
+			///
+			/// default contructor (deleted)
+			///
+			control_base(void) = delete;
+			///
+			/// contructor: tie the read control to a particular tree and lock the tree for read; blocking
+			///
+			control_base(
+				safe_avl_tree<T> & i_cTree, ///< the tree to be accessed
+				bool i_bLock_Type_Write ///< flag to indicate the type of lock control to assume
+				)  noexcept: m_pTree(&i_cTree)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_lock();
+				else
+					m_pTree->m_mMutex.read_lock();
+
+			}
+			///
+			/// copy contructor (deleted)
+			///
+			control_base(const control_base & i_cIterator)   = delete;
+			///
+			/// destructor: release read lock 
+			///
+			~control_base(void) noexcept
+			{
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_unlock();
+				else
+					m_pTree->m_mMutex.read_unlock();
+			}
+			///
+			/// assignment / copy operator (deleted)
+			///
+			control_base & operator = (const control_base & i_cIterator) = delete;
+			///
+			/// assignement operator; releases read access to existing tree and aquires read access to a different tree; blocking(Read)
+			///
+			control_base & operator =(const safe_avl_tree<T> & i_cTree) noexcept
+			{
+				if (&i_cTree != m_pTree) // don't do anything if being set to the tree that is already under control)
+				{
+					if (m_bLock_Type_Write)
+					{
+						i_cTree.m_mMutex.write_lock();
+						m_pTree->m_mMutex.write_unlock();
+					}
+					else
+					{
+						i_cTree.m_mMutex.read_lock();
+						m_pTree->m_mMutex.read_unlock();
+					}
+					control_base::m_pTree = &i_cTree;
+				}
+				return *this;
+			}
+			///
+			/// test if the tree is empty
+			/// \returns true if the tree is empty; false otherwise
+			///
+			bool empty(void) const noexcept
+			{
+				return m_pTree->nl_empty();
+			}
+			///
+			/// test if a value exists within the tree
+			/// \returns true if the key is within the tree; false otherwise
+			///
+			bool has_key(T i_tT) const  noexcept
+			{
+				return m_pTree->nl_has_key(i_tT);
+			}
+		};
+
+		///
+		/// the write control class is designed to allow scoped write access to the tree that maintains a write lock throughout the scope. This is useful when many writes occur
+		///
+		class read_control : public control_base
+		{
+		public:
+			///
+			/// void constructor; deleted
+			///
+			read_control(void) = delete;
+			///
+			/// contructor: tie the read control to a particular tree and lock the tree for read; blocking
+			///
+			read_control(
+				safe_avl_tree<T> & i_cTree ///< the tree to be accessed
+				)  noexcept: control_base(i_cTree,false)
+			{
+				;
+			}
+
+			///
+			/// copy contructor; creates a new read_control on a tree that an existing read control is accessing; blocking(read)
+			///
+			read_control(const read_control & i_cController) noexcept : control_base(*i_cController.m_pTree,false)
+			{
+				;
+			}
+			///
+			/// assignement operator; releases read access to existing tree and aquires read access to tree referred to by other controller; blocking(Read)
+			///
+			read_control & operator =(const read_control & i_cController) noexcept
+			{
+				i_cController.m_pTree->m_mMutex.read_lock();
+				control_base::m_pTree->m_mMutex.read_unlock();
+				control_base::m_pTree = i_cController.m_pTree;
+				return *this;
+			}
+		};
+
+
+		///
+		/// the write control class is designed to allow scoped write access to the tree that maintains a write lock throughout the scope. This is useful when many writes occur
+		///
+		class write_control : public control_base
+		{
+		public:
+			///
+			/// default contructor (deleted)
+			///
+			write_control(void) = delete;
+			///
+			/// contructor: tie the read control to a particular tree and lock the tree for read; blocking
+			///
+			write_control(
+				safe_avl_tree<T> & i_cTree ///< the tree to be accessed
+				)  noexcept: control_base(i_cTree,true)
+			{
+			}
+			///
+			/// copy contructor (deleted)
+			///
+			write_control(const write_control & i_cIterator)   = delete;
+			///
+			/// assignment / copy operator (deleted)
+			///
+			write_control & operator = (const write_control & i_cIterator) = delete;
+			///
+			/// store the value at the current location of the iterator; if the iterator is not pointing to valid data the request will be ignored
+			///
+			void insert(
+				const T& i_tT ///< the data to be stored
+				) noexcept
+			{
+				control_base::m_pTree->nl_insert(i_tT);
+			}
+			///
+			/// erase a value from the tree
+			///
+			void erase(
+				const T& i_tT ///< the data to be stored
+				) noexcept
+			{
+				control_base::m_pTree->nl_erase(i_tT);
+			}
+			///
+			/// clear the tree; 
+			///
+			void clear(void)
+			{
+				control_base::m_pTree->nl_clear();
+			}
+
+		};	
+	};
+}
+#endif // #ifndef __XSTDTSL_SAFE_AVL_TREE_H
