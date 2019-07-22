@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <xstdtsl_enums.hpp>
 #include <xstdtsl_mutex>
+#include <iostream>
 
 namespace xstdtsl
 {
@@ -26,16 +27,16 @@ namespace xstdtsl
 			tree_node *				m_pRight; ///< the right child of the node
 			tree_node *				m_pParent; ///< the parent of the node
 			int						m_nHeight; ///< the height of the node below this node
-		protected:
+		public:
 			void update_height(void)
 			{
 				// Update height of this node
 				int nLeft_Height = 0;
 				int nRight_Height = 0;
-				if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr)
-					nLeft_Height  = safe_avl_tree<T>::tree_node::m_pLeft->m_nHeight;
-				if (safe_avl_tree<T>::tree_node::m_pRight != nullptr)
-					nRight_Height  = safe_avl_tree<T>::tree_node::m_pRight->m_nHeight;
+				if (m_pLeft != nullptr)
+					nLeft_Height  = m_pLeft->m_nHeight;
+				if (m_pRight != nullptr)
+					nRight_Height  = m_pRight->m_nHeight;
 				m_nHeight = 1 + std::max(nLeft_Height,nRight_Height);
 			}
 			///
@@ -195,88 +196,11 @@ namespace xstdtsl
 				// Update height of this node
 				int nLeft_Height = 0;
 				int nRight_Height = 0;
-				if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr)
-					nLeft_Height  = safe_avl_tree<T>::tree_node::m_pLeft->m_nHeight;
-				if (safe_avl_tree<T>::tree_node::m_pRight != nullptr)
-					nRight_Height  = safe_avl_tree<T>::tree_node::m_pRight->m_nHeight;
+				if (m_pLeft != nullptr)
+					nLeft_Height  = m_pLeft->m_nHeight;
+				if (m_pRight != nullptr)
+					nRight_Height  = m_pRight->m_nHeight;
 				return nLeft_Height - nRight_Height; 
-			}
-			tree_node* balance(void)
-			{
-				tree_node * pRet = const_cast<tree_node*>(this);
-				int nBalance = get_balance();
-				//std::cout << "balance after insert at " << safe_avl_tree<T>::tree_node::m_tKey << " is " << nBalance << ". Left height is " << nLeft_Height << " and right height is " << nRight_Height << std::endl;
-
-				// if the node is unbalanced
-				if (nBalance > 1) // unbalanced to the left
-				{
-					// Left Right Case
-					if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr && safe_avl_tree<T>::tree_node::m_pLeft->get_balance() == -1)
-					{
-						//std::cout << "left-right left rotate " << std::endl;
-						safe_avl_tree<T>::tree_node::m_pLeft->rotate_left(); 
-					}
-					// otherwise Left Left Case 
-					//std::cout << "left unbalance right rotate " << std::endl;
-					pRet = rotate_right(); 
-				}
-				else if (nBalance < -1)  // unbalanced to the right
-				{
-					// Right Left Case 
-					if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr && safe_avl_tree<T>::tree_node::m_pLeft->get_balance() == 1)
-					{
-						//std::cout << "right-left right rotate " << std::endl;
-						safe_avl_tree<T>::tree_node::m_pRight->rotate_right(); 
-					}
-					// otherwise Right Right Case 
-					//std::cout << "right unbalance left rotate " << std::endl;
-					pRet = rotate_left(); 
-				}
-				return pRet;
-			}
-			///
-			/// insert a new node if the given key is non-duplicate; will perform tree-balance if necessary per AVL algorithm
-			/// \returns new root of tree
-			///
-			tree_node* insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
-			{ 
-				tree_node* pRet = const_cast<tree_node*>(this);
-				if (i_tKey != safe_avl_tree<T>::tree_node::m_tKey)
-				{
-					// Insert the new key/node as normal BST insert
-					if (i_tKey < safe_avl_tree<T>::tree_node::m_tKey)
-					{
-						if (safe_avl_tree<T>::tree_node::m_pLeft != nullptr)
-							safe_avl_tree<T>::tree_node::m_pLeft = safe_avl_tree<T>::tree_node::m_pLeft->insert(i_tKey);
-						else
-							safe_avl_tree<T>::tree_node::m_pLeft = new tree_node(this,i_tKey);
-					}
-					else if (i_tKey > safe_avl_tree<T>::tree_node::m_tKey)
-					{
-						if (safe_avl_tree<T>::tree_node::m_pRight != nullptr)
-							safe_avl_tree<T>::tree_node::m_pRight = safe_avl_tree<T>::tree_node::m_pRight->insert(i_tKey);
-						else
-							safe_avl_tree<T>::tree_node::m_pRight = new tree_node(this,i_tKey);
-					}
-					update_height();
-					pRet = balance();
-				}
-				return const_cast<tree_node *>(pRet);
-			}
-			///
-			/// find the node within this sub-tree that contains the given value
-			/// \returns a pointer to the node containing the value
-			///
-			virtual tree_node * search(T i_tKey) const noexcept
-			{
-				tree_node * pRet = nullptr;
-				if (m_tKey == i_tKey)
-					pRet = const_cast<tree_node *>(this);
-				else if (i_tKey < m_tKey && m_pLeft != nullptr)
-					pRet = m_pLeft->search(i_tKey);
-				else if (i_tKey > m_tKey && m_pRight != nullptr)
-					pRet = m_pRight->search(i_tKey);
-				return pRet;
 			}
 			///
 			/// create an identical copy of the tree stating at the current node
@@ -292,6 +216,7 @@ namespace xstdtsl
 					pRet->m_pRight = m_pRight->create_copy(pRet);
 				return pRet;
 			}
+
 		}; 
 
 	protected:
@@ -336,6 +261,8 @@ namespace xstdtsl
 		}
 
 	protected:
+	
+
 		///
 		/// create a copy of an existing tree; blocking(read on tree to copy)
 		///
@@ -347,16 +274,101 @@ namespace xstdtsl
 			m_pRoot = nullptr;
 			if (i_cRHO.m_pRoot != nullptr)
 				m_pRoot = i_cRHO.m_pRoot->create_copy(nullptr);
+
 		}
+
+		void nl_balance(tree_node * i_pStart_Node)
+		{
+			tree_node * pCurr = i_pStart_Node;
+			tree_node * pLast = pCurr;
+			while (pCurr != nullptr)
+			{
+//				std::cout << "update height at " << pCurr->get_key() << std::endl;
+				pCurr->update_height();
+//				std::cout << "get balance" << std::endl;
+				int nBalance = pCurr->get_balance();
+//				std::cout << "balance is " << nBalance<< std::endl;
+
+				if (nBalance > 1) // unbalanced to the left
+				{
+					// Left Right Case
+					if (pCurr->get_left() != nullptr && pCurr->get_left()->get_balance() == -1)
+					{
+//						std::cout << "left-right left rotate " << std::endl;
+						pCurr->get_left()->rotate_left(); 
+					}
+					// otherwise Left Left Case 
+//					std::cout << "left unbalance right rotate " << std::endl;
+					pCurr = pCurr->rotate_right(); 
+				}
+				else if (nBalance < -1)  // unbalanced to the right
+				{
+					// Right Left Case 
+					if (pCurr->get_right() != nullptr && pCurr->get_right()->get_balance() == 1)
+					{
+//						std::cout << "right-left right rotate " << std::endl;
+						pCurr->get_right()->rotate_right(); 
+					}
+					// otherwise Right Right Case 
+//					std::cout << "right unbalance left rotate " << std::endl;
+					pCurr = pCurr->rotate_left(); 
+				}
+				pLast = pCurr;
+				pCurr = pCurr->get_parent();
+			}
+			m_pRoot = pLast; // update root
+		}
+		
 		///
-		/// insert a potentially new key into the tree
+		/// insert a new node if the given key is non-duplicate; will perform tree-balance if necessary per AVL algorithm
 		///
-		virtual void nl_insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
+		void nl_insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
 		{
 			if (m_pRoot != nullptr)
-				m_pRoot = m_pRoot->insert(i_tKey);
+			{
+				tree_node* pParent = m_pRoot;
+				tree_node* pCurr = m_pRoot;
+				while (pCurr != nullptr && pCurr->get_key() != i_tKey)
+				{
+					pParent = pCurr;
+					if (i_tKey < pCurr->get_key())
+						pCurr = pCurr->get_left();
+					else
+						pCurr = pCurr->get_right();
+				}
+//				std::cout << "find insertion point complete" << std::endl;
+				if (pCurr == nullptr)
+				{
+//					std::cout << "node is " << i_tKey << std::endl;
+//					std::cout << "parent is " << pParent->get_key() << std::endl;
+					tree_node* pNew = new tree_node(pParent,i_tKey);
+					if (i_tKey < pParent->get_key())
+						pParent->set_left(pNew);
+					else
+						pParent->set_right(pNew);
+//					std::cout << "balancing" << std::endl;
+					nl_balance(pParent);
+				}
+			}
 			else
 				m_pRoot = new tree_node(nullptr,i_tKey);
+		}
+		///
+		/// find the node within this sub-tree that contains the given value
+		/// \returns a pointer to the node containing the value
+		///
+		virtual tree_node * nl_search(T i_tKey) const noexcept
+		{
+			tree_node * pRet = m_pRoot;
+			
+			while (pRet != nullptr && pRet->get_key() != i_tKey)
+			{
+				if (i_tKey < pRet->get_key())
+					pRet = pRet->get_left();
+				else
+					pRet = pRet->get_right();
+			}
+			return pRet;
 		}
 		///
 		/// determine if a key exists within the tree; non-blocking
@@ -364,48 +376,82 @@ namespace xstdtsl
 		///
 		virtual bool nl_has_key(T i_tKey) const noexcept
 		{
-			tree_node * pSearch_Result = nullptr;
-			if (m_pRoot != nullptr)
-				pSearch_Result = m_pRoot->search(i_tKey);
+			tree_node * pSearch_Result = nl_search(i_tKey);
 			return (pSearch_Result != nullptr);
 		}
 		
 		///
 		/// erase a node in the tree based on its key
 		///
+		///
+		/// erase a node in the tree based on its key
+		///
 		virtual void nl_erase(T i_tKey) noexcept(noexcept(std::declval<T>().~T()))
 		{
-			tree_node * pSearch_Result = nullptr;
-			if (m_pRoot != nullptr)
-				pSearch_Result = m_pRoot->search(i_tKey);
+			tree_node * pSearch_Result = nl_search(i_tKey);
 			if (pSearch_Result != nullptr) // make sure the key is in the tree
 			{
+//				std::cout << "found node to erase: " << pSearch_Result->get_key() << std::endl;
 				tree_node * pParent = pSearch_Result->get_parent();
-
-				// perform a right pivot with delete
+//				if (pParent != nullptr)
+//					std::cout << "node's parent is: " << pParent->get_key() << std::endl;
+//				else
+//					std::cout << "node is root" << std::endl;
+				// find the leftmost leaf or node of the right sub-tree
 				tree_node * pNew_Root = pSearch_Result->get_right();
 				if (pNew_Root != nullptr)
 				{
-					// traverse the left children of the new root to find where to place the left children
+					// traverse the left children of the new root
 					tree_node * pCurr = pNew_Root->get_left();
-					tree_node * pLast = pNew_Root;
 					while (pCurr != nullptr)
 					{
-						pLast = pCurr;
+						pNew_Root = pCurr;
 						pCurr = pCurr->get_left();
 					}
-					// add the left children of the deleted node to the left children of the identified edge
-					pLast->set_left(pSearch_Result->get_left());
+//					std::cout << "new root will be " << pNew_Root->get_key() << std::endl;
+			
+//					std::cout << "setting new root's left branch to  ";
+//					if (pSearch_Result->get_left() != nullptr)
+//						std::cout << pSearch_Result->get_left()->get_key() << std::endl;
+//					else
+//						std::cout << "null" << std::endl;
+
+					pNew_Root->set_left(pSearch_Result->get_left());
+					if (pSearch_Result->get_left() != nullptr)
+						pNew_Root->get_left()->set_parent(pNew_Root);
+
+					tree_node * pRoot_Parent = pNew_Root->get_parent();
+//					std::cout << "setting new root's old parent (" << pRoot_Parent->get_key() << ") left branch to  ";
+//					if (pNew_Root->get_right() != nullptr)
+//						std::cout << pNew_Root->get_right()->get_key() << std::endl;
+//					else
+//						std::cout << "null" << std::endl;
+
+					pRoot_Parent->set_left(pNew_Root->get_right());
+					if (pNew_Root->get_right() != nullptr)
+						pNew_Root->get_right()->set_parent(pRoot_Parent);
+					if (pNew_Root != pSearch_Result->get_right())
+					{
+//						std::cout << "setting new root's right to ";
+//						std::cout << pSearch_Result->get_right()->get_key() << std::endl;
+						pNew_Root->set_right(pSearch_Result->get_right());
+					}
+					// update height of removed node's parent and ancestors
+					while (pRoot_Parent != nullptr)
+					{
+						pRoot_Parent->update_height();
+						pRoot_Parent = pRoot_Parent->get_parent();
+					}
+			
 				}
 				else // no right children; use the left child as the new root
 				{
 					pNew_Root = pSearch_Result->get_left();
+//					if (pNew_Root != nullptr)
+//						std::cout << "new root will be " << pNew_Root->get_key() << std::endl;
+//					else
+//						std::cout << "new root will be null" << std::endl;
 				}
-				// delete the erased node
-				pSearch_Result->set_left(nullptr);
-				pSearch_Result->set_right(nullptr);
-				delete pSearch_Result;
-
 				// place the new root and set its parent
 				if (pNew_Root != nullptr)
 					pNew_Root->set_parent(pParent);
@@ -415,12 +461,20 @@ namespace xstdtsl
 						pParent->set_left(pNew_Root);
 					else
 						pParent->set_right(pNew_Root);
-					// check balance
 				}
 				else /// no parent and the key exists -- we are erasing the root of the tree
 					m_pRoot = pNew_Root;
+//				std::cout << "erase rebalance" << std::endl;
+				if (pNew_Root != nullptr)
+					nl_balance(pNew_Root);
+				else if (pParent != nullptr)
+					nl_balance(pParent);
 
-//				while (pParent != nullptr)
+				// delete the erased node
+				pSearch_Result->set_left(nullptr);
+				pSearch_Result->set_right(nullptr);
+				delete pSearch_Result;
+
 			}
 		}
 		///

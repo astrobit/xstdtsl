@@ -150,46 +150,7 @@ namespace xstdtsl
 			{
 				m_pParent = i_pNew_Parent;
 			}
-			///
-			/// insert a new node as a child of the current node
-			///
-			virtual tree_node * insert(T i_tNew_Key) noexcept(noexcept(T(std::declval<T>())))
-			{
-				if (i_tNew_Key < m_tKey)
-				{
-					if (m_pLeft == nullptr)
-					{
-						m_pLeft = new tree_node(this,i_tNew_Key);
-					}
-					else
-						m_pLeft->insert(i_tNew_Key);
-				}
-				else if (i_tNew_Key > m_tKey)
-				{
-					if (m_pRight == nullptr)
-					{
-						m_pRight = new tree_node(this,i_tNew_Key);
-					}
-					else
-						m_pRight->insert(i_tNew_Key);
-				}
-				return const_cast<tree_node *>(this);
-			}
-			///
-			/// find the node within this sub-tree that contains the given value
-			/// \returns a pointer to the node containing the value
-			///
-			virtual tree_node * search(T i_tKey) const noexcept
-			{
-				tree_node * pRet = nullptr;
-				if (m_tKey == i_tKey)
-					pRet = const_cast<tree_node *>(this);
-				else if (i_tKey < m_tKey && m_pLeft != nullptr)
-					pRet = m_pLeft->search(i_tKey);
-				else if (i_tKey > m_tKey && m_pRight != nullptr)
-					pRet = m_pRight->search(i_tKey);
-				return pRet;
-			}
+
 			///
 			/// create an identical copy of the tree stating at the current node
 			/// \returns a pointer to the new tree
@@ -261,12 +222,51 @@ namespace xstdtsl
 				m_pRoot = i_cRHO.m_pRoot->create_copy(nullptr);
 		}
 		///
+		/// find the node within this sub-tree that contains the given value
+		/// \returns a pointer to the node containing the value
+		///
+		virtual tree_node * nl_search(T i_tKey) const noexcept
+		{
+			tree_node * pRet = m_pRoot;
+			
+			while (pRet != nullptr && pRet->get_key() != i_tKey)
+			{
+				if (i_tKey < pRet->get_key())
+					pRet = pRet->get_left();
+				else
+					pRet = pRet->get_right();
+			}
+			return pRet;
+		}
+		///
 		/// insert a potentially new key into the tree
 		///
 		virtual void nl_insert(T i_tKey) noexcept(noexcept(T(std::declval<T>())))
 		{
 			if (m_pRoot != nullptr)
-				m_pRoot = m_pRoot->insert(i_tKey);
+			{
+				tree_node* pParent = m_pRoot;
+				tree_node* pCurr = m_pRoot;
+				while (pCurr != nullptr && pCurr->get_key() != i_tKey)
+				{
+					pParent = pCurr;
+					if (i_tKey < pCurr->get_key())
+						pCurr = pCurr->get_left();
+					else
+						pCurr = pCurr->get_right();
+				}
+//				std::cout << "find insertion point complete" << std::endl;
+				if (pCurr == nullptr)
+				{
+//					std::cout << "node is " << i_tKey << std::endl;
+//					std::cout << "parent is " << pParent->get_key() << std::endl;
+					tree_node* pNew = new tree_node(pParent,i_tKey);
+					if (i_tKey < pParent->get_key())
+						pParent->set_left(pNew);
+					else
+						pParent->set_right(pNew);
+				}
+			}
 			else
 				m_pRoot = new tree_node(nullptr,i_tKey);
 		}
@@ -276,10 +276,7 @@ namespace xstdtsl
 		///
 		virtual bool nl_has_key(T i_tKey) const noexcept
 		{
-			tree_node * pSearch_Result = nullptr;
-			if (m_pRoot != nullptr)
-				pSearch_Result = m_pRoot->search(i_tKey);
-			return (pSearch_Result != nullptr);
+			return (nl_search(i_tKey) != nullptr);
 		}
 		
 		///
@@ -287,37 +284,41 @@ namespace xstdtsl
 		///
 		virtual void nl_erase(T i_tKey) noexcept(noexcept(std::declval<T>().~T()))
 		{
-			tree_node * pSearch_Result = nullptr;
-			if (m_pRoot != nullptr)
-				pSearch_Result = m_pRoot->search(i_tKey);
+			tree_node * pSearch_Result = nl_search(i_tKey);
 			if (pSearch_Result != nullptr) // make sure the key is in the tree
 			{
 				tree_node * pParent = pSearch_Result->get_parent();
-
-				// perform a right pivot with delete
+				// find the leftmost leaf or node of the right sub-tree
 				tree_node * pNew_Root = pSearch_Result->get_right();
 				if (pNew_Root != nullptr)
 				{
-					// traverse the left children of the new root to find where to place the left children
+					// traverse the left children of the new root
 					tree_node * pCurr = pNew_Root->get_left();
-					tree_node * pLast = pNew_Root;
 					while (pCurr != nullptr)
 					{
-						pLast = pCurr;
+						pNew_Root = pCurr;
 						pCurr = pCurr->get_left();
 					}
-					// add the left children of the deleted node to the left children of the identified edge
-					pLast->set_left(pSearch_Result->get_left());
+
+					pNew_Root->set_left(pSearch_Result->get_left());
+					if (pSearch_Result->get_left() != nullptr)
+						pNew_Root->get_left()->set_parent(pNew_Root);
+
+					tree_node * pRoot_Parent = pNew_Root->get_parent();
+
+					pRoot_Parent->set_left(pNew_Root->get_right());
+					if (pNew_Root->get_right() != nullptr)
+						pNew_Root->get_right()->set_parent(pRoot_Parent);
+					if (pNew_Root != pSearch_Result->get_right())
+					{
+						pNew_Root->set_right(pSearch_Result->get_right());
+					}
+			
 				}
 				else // no right children; use the left child as the new root
 				{
 					pNew_Root = pSearch_Result->get_left();
 				}
-				// delete the erased node
-				pSearch_Result->set_left(nullptr);
-				pSearch_Result->set_right(nullptr);
-				delete pSearch_Result;
-
 				// place the new root and set its parent
 				if (pNew_Root != nullptr)
 					pNew_Root->set_parent(pParent);
@@ -330,6 +331,12 @@ namespace xstdtsl
 				}
 				else /// no parent and the key exists -- we are erasing the root of the tree
 					m_pRoot = pNew_Root;
+
+				// delete the erased node
+				pSearch_Result->set_left(nullptr);
+				pSearch_Result->set_right(nullptr);
+				delete pSearch_Result;
+
 			}
 		}
 		///
