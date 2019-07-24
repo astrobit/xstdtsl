@@ -4,6 +4,7 @@
 
 #include <xstdtsl_enums.hpp>
 #include <xstdtsl_mutex>
+#include <iostream>
 
 namespace xstdtsl
 {
@@ -174,8 +175,8 @@ namespace xstdtsl
 			virtual void set_parent(tree_node * i_pNew_Parent) noexcept
 			{
 				m_pParent = i_pNew_Parent;
-				if (i_pNew_Parent == nullptr)
-					m_bColor_Red = false; // make sure the root of the tree is black
+//				if (i_pNew_Parent == nullptr)
+//					m_bColor_Red = false; // make sure the root of the tree is black
 			}
 
 			///
@@ -305,6 +306,9 @@ namespace xstdtsl
 			}
 			return pRet;
 		}
+		///
+		/// balance the tree after an insertion
+		///
 		void nl_balance(tree_node * 	i_pNode)
 		{
 			if (i_pNode != nullptr) // safety check
@@ -312,63 +316,62 @@ namespace xstdtsl
 				// if node is tree root; make it black
 				if (i_pNode->get_parent() == nullptr)
 				{
+//					std::cout << " node is root of tree" << std::endl;
 					m_pRoot = i_pNode;// this is root
-					//i_pNode->set_color_black(); // this occurs within the node when the parent is set
+					i_pNode->set_color_black(); // this occurs within the node when the parent is set
 				}
 				else
 				{
 					tree_node * pParent = i_pNode->get_parent();
 					if (i_pNode->is_red() && pParent->is_red())
 					{
+//						std::cout << " node is red and parent is red" << std::endl;
 						tree_node * pGrand_Parent = pParent->get_parent();
 						tree_node * pUncle = pGrand_Parent->get_left(); // guess that uncle is left of grandparent
 						if (pParent == pGrand_Parent->get_left()) // if parent is left of grandparent, uncle is right of grandparent
 							pUncle = pGrand_Parent->get_right();
 						if (pUncle != nullptr && pUncle->is_red()) 
 						{ // parent is red and uncle is red: repaint the parent, uncle and grandparent
+//							std::cout << " repaint parent and uncle; rebalance from grandparent" << std::endl;
 							pParent->set_color_black();
 							pUncle->set_color_black();
 							pGrand_Parent->set_color_red();
 							// great-grandparent and grandparent may be both red: rerun process for the grandparent
-							nl_balance(pGrand_Parent);
 						}
 						else
 						{ // uncle is black or doesnt exist
 							if (pParent == pGrand_Parent->get_left())
 							{
+//								std::cout << " parent is left child of grandparent" << std::endl;
 								if (i_pNode == pParent->get_right())
-									pGrand_Parent->set_left(pParent->rotate_left());
-								tree_node * pGreat_Grand_Parent = pGrand_Parent->get_parent();
-								tree_node * pRotation = pGrand_Parent->rotate_right();
-								if (pGreat_Grand_Parent == nullptr)
 								{
-									m_pRoot = pRotation; // grandparent after rotation is the new root
-									m_pRoot->set_color_black();
+//									std::cout << " node is right child of parent; rotate parent left" << std::endl;
+									pParent->rotate_left();
 								}
-								else if (pGreat_Grand_Parent->get_left() == pGrand_Parent)
-									pGreat_Grand_Parent->set_left(pRotation); //grandparent was left child of great-grand-parent; set rotated tree accordingly
-								else
-									pGreat_Grand_Parent->set_right(pRotation);//grandparent was right child of great-grand-parent; set rotated tree accordingly
-								pParent->swap_color(pGrand_Parent);
+								tree_node * pGreat_Grand_Parent = pGrand_Parent->get_parent();
+//								std::cout << " rotate right at grand-parent" << std::endl;
+								tree_node * pRotation = pGrand_Parent->rotate_right();
+//								std::cout << " swap color of parent and grand-parent" << std::endl;
+								pRotation->swap_color(pGrand_Parent);
+								pGrand_Parent = pRotation;
 							}
 							else
 							{
+//								std::cout << " parent is right child of grandparent" << std::endl;
 								if (i_pNode == pParent->get_left())
-									pGrand_Parent->set_right(pParent->rotate_right());
-								tree_node * pGreat_Grand_Parent = pGrand_Parent->get_parent();
-								tree_node * pRotation = pGrand_Parent->rotate_left();
-								if (pGreat_Grand_Parent == nullptr)
 								{
-									m_pRoot = pRotation; // grandparent after rotation is the new root
-									m_pRoot->set_color_black();
+//									std::cout << " node is left child of parent; rotate parent right" << std::endl;
+									pParent->rotate_right();
 								}
-								else if (pGreat_Grand_Parent->get_left() == pGrand_Parent)
-									pGreat_Grand_Parent->set_left(pRotation);//grandparent was left child of great-grand-parent; set rotated tree accordingly
-								else
-									pGreat_Grand_Parent->set_right(pRotation);//grandparent was right child of great-grand-parent; set rotated tree accordingly
-								pParent->swap_color(pGrand_Parent);
+								tree_node * pGreat_Grand_Parent = pGrand_Parent->get_parent();
+//								std::cout << " rotate left at grand-parent" << std::endl;
+								tree_node * pRotation = pGrand_Parent->rotate_left();
+//								std::cout << " swap color of parent and grand-parent" << std::endl;
+								pRotation->swap_color(pGrand_Parent);
+								pGrand_Parent = pRotation;
 							}
 						}
+						nl_balance(pGrand_Parent);
 					}
 				}
 			}
@@ -536,7 +539,7 @@ namespace xstdtsl
 
 				if (pNew_Root != nullptr && pParent == nullptr) // new root will be the tree root
 				{
-					; // no work needed: setting the parent already took care of setting the color
+					pNew_Root->set_color_black(); // simply repaint the new root
 				}
 				else if (pNew_Root != nullptr && (pSearch_Result->is_red() || pNew_Root->is_red()))
 				{
