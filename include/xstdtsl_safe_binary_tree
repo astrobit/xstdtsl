@@ -23,7 +23,7 @@ namespace xstdtsl
 			T 						m_tKey; ///< the value of the node
 			tree_node *				m_pLeft; ///< the left child of the node
 			tree_node *				m_pRight; ///< the right child of the node
-			const tree_node *		m_pParent; ///< the parent of the node
+			tree_node *				m_pParent; ///< the parent of the node
 		protected:
 			///
 			/// rotate the tree based at the current node to the right
@@ -33,15 +33,25 @@ namespace xstdtsl
 				tree_node * pRet = const_cast<tree_node *>(this);
 				if (m_pLeft != nullptr)
 				{
-					tree_node * pRet = m_pLeft; 
+					pRet = m_pLeft; 
 					tree_node * pRightOfLeft = pRet->m_pRight; 
 
 					// Perform rotation 
 					pRet->m_pRight = const_cast<tree_node *>(this); 
 					m_pLeft = pRightOfLeft; 
+					// update link from parent
+					if (m_pParent != nullptr)
+					{
+						if (m_pParent->m_pLeft == this)
+							m_pParent->m_pLeft = pRet;
+						else
+							m_pParent->m_pRight = pRet;
+					}
+
 					// update parents
 					pRet->m_pParent = m_pParent;
 					m_pParent = pRet;
+
 				} //if (m_pLeft != nullptr)
 				// Return new root 
 				return pRet; 
@@ -61,9 +71,19 @@ namespace xstdtsl
 					// Perform rotation 
 					pRet->m_pLeft = const_cast<tree_node *>(this); 
 					m_pRight = pLeftOfRight; 
+					// update link from parent
+					if (m_pParent != nullptr)
+					{
+						if (m_pParent->m_pLeft == this)
+							m_pParent->m_pLeft = pRet;
+						else
+							m_pParent->m_pRight = pRet;
+					}
+
 					// update parents
 					pRet->m_pParent = m_pParent;
 					m_pParent = pRet;
+
 				} // if (m_pRight != nullptr)
 				// Return new root 
 				return pRet; 
@@ -79,7 +99,7 @@ namespace xstdtsl
 			///
 			/// create a node with no children and the given parent and value
 			///
-			tree_node(const tree_node * i_pParent, T i_tKey) noexcept(noexcept(T(std::declval<T>()))) : m_tKey(i_tKey), m_pParent(i_pParent), m_pLeft(nullptr), m_pRight(nullptr) 
+			tree_node(tree_node * i_pParent, T i_tKey) noexcept(noexcept(T(std::declval<T>()))) : m_tKey(i_tKey), m_pParent(i_pParent), m_pLeft(nullptr), m_pRight(nullptr) 
 			{
 				;	
 			}
@@ -156,7 +176,7 @@ namespace xstdtsl
 			/// \returns a pointer to the new tree
 			///
 
-			virtual tree_node * create_copy(const tree_node * i_pParent) noexcept(noexcept(T(std::declval<T>())))
+			virtual tree_node * create_copy(tree_node * i_pParent) noexcept(noexcept(T(std::declval<T>())))
 			{
 				tree_node * pRet = new tree_node(i_pParent,m_tKey);
 				if (m_pLeft != nullptr)
