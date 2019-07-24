@@ -513,6 +513,18 @@ namespace xstdtsl
 			else
 				nl_insert(i_tKey);
 		}			
+		///
+		/// retrieve the specified key
+		/// \returns the specified key, or T() if not found
+		///
+		virtual T nl_load(T i_tKey) const noexcept
+		{
+			T tRet;
+			tree_node * pSearch_Result = nl_search(i_tKey);
+			if (pSearch_Result != nullptr) // make sure the key is in the tree
+				tRet = pSearch_Result->get_key();
+			return tRet;
+		}			
 
 	public:
 		///
@@ -561,10 +573,18 @@ namespace xstdtsl
 		///
 		/// (re) store information in the tree, or insert if the key doesn't exist
 		///
-		virtual void store(T i_tKey)
+		virtual void store(T i_tKey) noexcept
 		{
 			write_lock_guard cLock(m_mMutex);
 			nl_store(i_tKey);
+		}
+		///
+		/// (re) store information in the tree, or insert if the key doesn't exist
+		///
+		virtual T load(T i_tKey) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_load(i_tKey);
 		}
 
 
@@ -900,7 +920,46 @@ namespace xstdtsl
 				return cRet;
 			}
 		};
+		///
+		/// class for iterating through a tree; unlike typical iterators this class is scoped and holds a write lock on the tree to ensure that the tree does not change data or size during iteration
+		///
+		class write_iterator : public iterator_base
+		{
+		public:
+			///
+			/// default constructor (deleted)
+			///
+			write_iterator(void) = delete;
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree; blocking (write)
+			///
+			write_iterator(
+				const safe_avl_tree<T> & i_cTree, ///< the tree to iterate over
+				enum binary_trees::start_point i_eStart_Point ///< the starting point to use within the tree (beginning or end)
+				)  noexcept : iterator_base(i_cTree,i_eStart_Point,true)
+			{
+			}
+			///
+			/// copy constructor (deleted)
+			///
+			write_iterator(
+				const read_iterator & i_cIterator ///< the iterator to copy
+				)  = delete;
+			///
+			/// assignment operator (deleted)
+			///
+			write_iterator & operator = (
+					const read_iterator & i_cIterator ///< the iterator to copy
+				) = delete;
 
+			///
+			/// store a key at the current position; if the key matches the current key (via the == operator) the key is updated; otherwise it is ignored
+			///
+			void store(T i_tKey) noexcept
+			{
+				iterator_base::m_pCursor->set_key(i_tKey);
+			}
+		};
 
 		class control_base
 		{
@@ -983,6 +1042,14 @@ namespace xstdtsl
 			{
 				return m_pTree->nl_has_key(i_tT);
 			}
+			///
+			/// retrieve a value from the tree
+			///
+			T load(T i_tT) const  noexcept
+			{
+				return m_pTree->nl_load(i_tT);
+			}
+
 		};
 
 		///
