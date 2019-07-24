@@ -683,7 +683,7 @@ namespace tests
 			tree_read_iterator::move_iter_right<read_iterator>(cIter);
 			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,30);
 		}
-		std::cout << "confirm all elements in the duplicate tree except the erased one" << std::endl;
+		std::cout << "confirm all elements in the tree" << std::endl;
 		tree_tree::confirm_has_key<treetype>(cTI,5);
 		tree_tree::confirm_has_key<treetype>(cTI,10);
 		tree_tree::confirm_has_key<treetype>(cTI,15);
@@ -754,6 +754,7 @@ namespace tests
 			tree_read_iterator::move_iter_left<read_iterator>(cIter);
 			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 5);
 		}
+		std::cout << "confirm all elements in the tree" << std::endl;
 		tree_tree::confirm_has_key<treetype>(cTI,5);
 		tree_tree::confirm_has_key<treetype>(cTI,10);
 		tree_tree::confirm_has_key<treetype>(cTI,15);
@@ -825,6 +826,7 @@ namespace tests
 			tree_read_iterator::move_iter_left<read_iterator>(cIter);
 			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter, 5);
 		}
+		std::cout << "confirm all elements in the tree" << std::endl;
 		tree_tree::confirm_has_key<treetype>(cTI, 5);
 		tree_tree::confirm_has_key<treetype>(cTI, 10);
 		tree_tree::confirm_has_key<treetype>(cTI, 15);
@@ -832,6 +834,83 @@ namespace tests
 		tree_tree::confirm_has_key<treetype>(cTI, 25);
 		tree_tree::confirm_has_key<treetype>(cTI, 30);
 		tree_tree::confirm_has_key<treetype>(cTI, 35);
+		std::cout << "destruct tree" << std::endl;
+	}
+
+	template<class treetype,class read_iterator> void rb_balancing_1(void)
+	{
+		std::cout << "-----===== red-black tree balancing tests #1 =====-----" << std::endl;
+		std::cout << "void constructor" << std::endl;
+		treetype cTI;
+		tree_tree::insert_element<treetype>(cTI,5);
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,5);
+		}
+		tree_tree::insert_element<treetype>(cTI,10);
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,5);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,10);
+		}
+		tree_tree::insert_element<treetype>(cTI,15); // rebalance
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,10);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,15);
+		}
+		tree_tree::insert_element<treetype>(cTI,20);
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,10);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,15);
+		}
+		tree_tree::insert_element<treetype>(cTI,25); // rebalance
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,10);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,20);
+		}
+		tree_tree::insert_element<treetype>(cTI,30);
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,10);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,20);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,25);
+		}
+		tree_tree::insert_element<treetype>(cTI,35); // rebalance
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,10);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,20);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,30);
+		}
+		tree_tree::insert_element<treetype>(cTI,40); // rebalance
+		{
+			read_iterator cIter(cTI,xstdtsl::binary_trees::start_point::root);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,20);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,30);
+			tree_read_iterator::move_iter_right<read_iterator>(cIter);
+			tree_read_iterator::confirm_read_iterator_load<read_iterator>(cIter,35);
+		}
+		std::cout << "confirm all elements in the tree" << std::endl;
+		tree_tree::confirm_has_key<treetype>(cTI,5);
+		tree_tree::confirm_has_key<treetype>(cTI,10);
+		tree_tree::confirm_has_key<treetype>(cTI,15);
+		tree_tree::confirm_has_key<treetype>(cTI,20);
+		tree_tree::confirm_has_key<treetype>(cTI,25);
+		tree_tree::confirm_has_key<treetype>(cTI,30);
+		tree_tree::confirm_has_key<treetype>(cTI,35);
+		tree_tree::confirm_has_key<treetype>(cTI,40);
 		std::cout << "destruct tree" << std::endl;
 	}
 
