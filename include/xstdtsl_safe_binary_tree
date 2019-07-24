@@ -124,6 +124,15 @@ namespace xstdtsl
 				return m_tKey;
 			}
 			///
+			/// set the value of the current node, only if the value is equal to the current value
+			///
+			virtual void set_key(T i_tKey) noexcept
+			{
+				if (i_tKey == m_tKey)
+					m_tKey = i_tKey;
+			}
+
+			///
 			/// get the left child of the current node
 			/// \returns a pointer to the left child, or nullptr if the node does not have a right child
 			///
@@ -375,6 +384,17 @@ namespace xstdtsl
 		{
 			return m_pRoot == nullptr;
 		}
+		///
+		/// (re) store information in the tree, or insert if the key doesn't exist
+		///
+		virtual void nl_store(T i_tKey) noexcept
+		{
+			tree_node * pSearch_Result = nl_search(i_tKey);
+			if (pSearch_Result != nullptr) // make sure the key is in the tree
+				pSearch_Result->set_key(i_tKey);
+			else
+				nl_insert(i_tKey);
+		}			
 
 	public:
 		///
@@ -420,6 +440,15 @@ namespace xstdtsl
 			read_lock_guard cLock(m_mMutex);
 			return nl_empty();
 		}
+		///
+		/// (re) store information in the tree, or insert if the key doesn't exist
+		///
+		virtual void store(T i_tKey)
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_store(i_tKey);
+		}
+
 
 			
 		///
@@ -928,6 +957,13 @@ namespace xstdtsl
 			void clear(void)
 			{
 				control_base::m_pTree->nl_clear();
+			}
+			///
+			/// (re) store a value in the tree; insert's value if the key doesn't exist, otherwise updates the current value
+			///
+			void store(T i_tKey)
+			{
+				control_base::m_pTree->nl_store(i_tKey);
 			}
 
 		};	
