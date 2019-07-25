@@ -1,0 +1,1295 @@
+#pragma once
+#ifndef __XSTDTSL_SAFE_MAP_H
+#define __XSTDTSL_SAFE_MAP_H
+
+#include <xstdtsl_enums.hpp>
+#include <xstdtsl_mutex>
+#include <iostream>
+
+
+namespace xstdtsl
+{
+
+	///
+	/// a basic binary tree that doesn't self-balance
+	///
+	template <class T, class U> class safe_map
+	{
+	protected:
+		///
+		/// a node within the tree
+		///
+		class tree_node
+		{ 
+		protected: 
+			T 						m_tKey; ///< the key for the node
+			U						m_tValue; ///< the value associated with the key
+			tree_node *				m_pLeft; ///< the left child of the node
+			tree_node *				m_pRight; ///< the right child of the node
+			tree_node *				m_pParent; ///< the parent of the node
+			bool 					m_bColor_Red; ///< flag to indicate that this is a red node; otherwise is a black node
+		public:
+			///
+			/// rotate the tree based at the current node to the right
+			/// \returns pointer to new root of sub-tree
+			///
+			virtual tree_node *rotate_right(void) noexcept
+			{ 
+				tree_node * pRet = const_cast<tree_node *>(this);
+				if (m_pLeft != nullptr)
+				{
+					pRet = m_pLeft; 
+					tree_node * pRightOfLeft = pRet->m_pRight; 
+
+					// Perform rotation 
+					pRet->m_pRight = const_cast<tree_node *>(this); 
+					m_pLeft = pRightOfLeft; 
+					// update link from parent
+					if (m_pParent != nullptr)
+					{
+						if (m_pParent->m_pLeft == this)
+							m_pParent->m_pLeft = pRet;
+						else
+							m_pParent->m_pRight = pRet;
+					}
+
+					// update parents
+					pRet->m_pParent = m_pParent;
+					m_pParent = pRet;
+
+				} //if (m_pLeft != nullptr)
+				// Return new root 
+				return pRet; 
+			} //function tree_node *rotate_right(void)
+
+			///
+			/// rotate the tree based at the current node to the left
+			/// \returns pointer to new root of sub-tree
+			///
+			virtual tree_node *rotate_left(void) noexcept
+			{ 
+				tree_node * pRet = const_cast<tree_node *>(this);
+				if (m_pRight != nullptr)
+				{
+					pRet = m_pRight; 
+					tree_node * pLeftOfRight = pRet->m_pLeft; 
+
+					// Perform rotation 
+					pRet->m_pLeft = const_cast<tree_node *>(this); 
+					m_pRight = pLeftOfRight; 
+					// update link from parent
+					if (m_pParent != nullptr)
+					{
+						if (m_pParent->m_pLeft == this)
+							m_pParent->m_pLeft = pRet;
+						else
+							m_pParent->m_pRight = pRet;
+					}
+
+					// update parents
+					pRet->m_pParent = m_pParent;
+					m_pParent = pRet;
+
+
+				} // if (m_pRight != nullptr)
+				// Return new root 
+				return pRet; 
+			} //function tree_node *rotate_left(void)
+		public:
+
+			///
+			/// void constructor; create an empty, valueless node (i.e. no children or parent; key  constructed with default constructor)
+			///
+			tree_node(void) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>()))) : m_tKey(), m_tValue(), m_pParent(nullptr), m_pLeft(nullptr), m_pRight(nullptr), m_bColor_Red(true) 
+			{
+				;
+			}
+			///
+			/// create a node with no children and the given parent and value
+			///
+			tree_node(tree_node * i_pParent, T i_tKey, U i_tValue) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>()))) : m_tKey(i_tKey), m_tValue(i_tValue), m_pParent(i_pParent), m_pLeft(nullptr), m_pRight(nullptr) 
+			{
+				m_bColor_Red = i_pParent != nullptr;
+			}
+			///
+			/// destructor: destroy the left children then the right children of the current node
+			///
+			virtual ~tree_node(void) noexcept(noexcept(std::declval<T>().~T()) && noexcept(std::declval<U>().~U()))
+			{
+				if (m_pLeft != nullptr)
+					delete m_pLeft;
+				m_pLeft = nullptr;
+				if (m_pRight != nullptr)
+					delete m_pRight;
+				m_pRight = nullptr;
+			}
+
+			///
+			/// get the key of the current node
+			///
+			virtual T get_key(void) const noexcept
+			{
+				return m_tKey;
+			}
+			///
+			/// get the value of the current node
+			///
+			virtual U get_value(void) const noexcept
+			{
+				return m_tValue;
+			}
+			///
+			/// set the value of the current node, only if the value is equal to the current value
+			///
+			virtual void set_value(U i_tValue) noexcept
+			{
+				m_tValue = i_tValue;
+			}
+			///
+			/// get the left child of the current node
+			/// \returns a pointer to the left child, or nullptr if the node does not have a right child
+			///
+			virtual tree_node * get_left(void) const noexcept
+			{
+				return m_pLeft;
+			}
+			///
+			/// set the left child of the current node
+			///
+			virtual void set_left(tree_node * i_pNew_Left) noexcept
+			{
+				m_pLeft = i_pNew_Left;
+			}
+
+			///
+			/// get the right child of the current node
+			/// \returns a pointer to the right child, or nullptr if the node does not have a right child
+			///
+			virtual tree_node * get_right(void) const noexcept
+			{
+				return m_pRight;
+			}
+			///
+			/// set the right child of the current node
+			///
+			virtual void set_right(tree_node * i_pNew_Right) noexcept
+			{
+				m_pRight = i_pNew_Right;
+			}
+			///
+			/// get the parent of the current node
+			/// \returns a pointer to the parent, or nullptr if the node is root of the tree
+			///
+			virtual tree_node * get_parent(void) const noexcept
+			{
+				return const_cast<tree_node *>(m_pParent);
+			}
+
+			///
+			/// set the parent of the current node
+			///
+			virtual void set_parent(tree_node * i_pNew_Parent) noexcept
+			{
+				m_pParent = i_pNew_Parent;
+//				if (i_pNew_Parent == nullptr)
+//					m_bColor_Red = false; // make sure the root of the tree is black
+			}
+
+			///
+			/// create an identical copy of the tree stating at the current node
+			/// \returns a pointer to the new tree
+			///
+
+			virtual tree_node * create_copy(tree_node * i_pParent) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>())))
+			{
+				tree_node * pRet = new tree_node(i_pParent,m_tKey,m_tValue);
+				pRet->m_bColor_Red = m_bColor_Red;
+				if (m_pLeft != nullptr)
+					pRet->m_pLeft = m_pLeft->create_copy(pRet);
+				if (m_pRight != nullptr)
+					pRet->m_pRight = m_pRight->create_copy(pRet);
+				return pRet;
+			}
+
+			///
+			/// determine if the color of this node is red
+			/// \returns true if the node is red, false otherwise
+			///
+			bool is_red(void) const noexcept
+			{
+				return m_bColor_Red;
+			}
+			///
+			/// determine if the color of this node is black
+			/// \returns true if the node is black, false otherwise
+			///
+			bool is_black(void) const noexcept
+			{
+				return !m_bColor_Red;
+			}
+			///
+			/// sets the color of this node to red
+			///
+			void set_color_red(void) noexcept
+			{
+				m_bColor_Red = true;
+			}
+			///
+			/// sets the color of this node to black
+			///
+			void set_color_black(void) noexcept
+			{
+				m_bColor_Red = false;
+			}
+			///
+			/// swaps the color of two nodes
+			///
+			void swap_color(tree_node * i_pOther_Node) noexcept
+			{
+				if (i_pOther_Node != nullptr)
+					std::swap(m_bColor_Red,i_pOther_Node->m_bColor_Red);
+			}
+		}; 
+
+	protected:
+		tree_node * 				m_pRoot; ///< the root of the tree
+		mutable read_write_mutex	m_mMutex; ///< a read-write mutex for control of insertion, erasing, clearing, and searching the tree
+
+	public:
+		///
+		/// void constructor; creates an empty tree; blocking(write)
+		///
+		safe_map(void) noexcept
+		{
+			m_pRoot = nullptr;
+		}
+		///
+		/// copy constructor; creates a tree that is identical to an existing tree; blocking(read/write)
+		///
+		safe_map(const safe_map<T,U> & i_cRHO) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>())))
+		{
+			write_lock_guard cLock(m_mMutex);
+			m_pRoot = nullptr;
+			nl_copy(i_cRHO);
+		}
+		///
+		/// destructor; destroys the tree; blocking(write)
+		///
+		virtual ~safe_map(void) noexcept(noexcept(std::declval<T>().~T())&&noexcept(std::declval<U>().~U()))
+		{
+			write_lock_guard cLock(m_mMutex);
+			if (m_pRoot != nullptr)
+				delete m_pRoot;
+			m_pRoot = nullptr;
+		}
+		///
+		/// copy constructor; creates a tree that is identical to an existing tree; blocking(read/write)
+		///
+		safe_map & operator=(const safe_map<T,U> & i_cRHO) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>())))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_copy(i_cRHO);
+			return *this;
+		}
+
+	protected:
+		///
+		/// create a copy of an existing tree; blocking(read on tree to copy)
+		///
+		virtual void nl_copy(const safe_map<T,U> & i_cRHO) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>())))
+		{
+			read_lock_guard cLock(i_cRHO.m_mMutex);
+			if (m_pRoot != nullptr)
+				delete m_pRoot;
+			m_pRoot = nullptr;
+			if (i_cRHO.m_pRoot != nullptr)
+				m_pRoot = i_cRHO.m_pRoot->create_copy(nullptr);
+		}
+		///
+		/// find the node within this sub-tree that contains the given value
+		/// \returns a pointer to the node containing the value
+		///
+		virtual tree_node * nl_search(T i_tKey) const noexcept
+		{
+			tree_node * pRet = m_pRoot;
+			
+			while (pRet != nullptr && pRet->get_key() != i_tKey)
+			{
+				if (i_tKey < pRet->get_key())
+					pRet = pRet->get_left();
+				else
+					pRet = pRet->get_right();
+			}
+			return pRet;
+		}
+		///
+		/// balance the tree after an insertion
+		///
+		void nl_balance(tree_node * 	i_pNode)
+		{
+			if (i_pNode != nullptr) // safety check
+			{
+				// if node is tree root; make it black
+				if (i_pNode->get_parent() == nullptr)
+				{
+//					std::cout << " node is root of tree" << std::endl;
+					m_pRoot = i_pNode;// this is root
+					i_pNode->set_color_black(); // this occurs within the node when the parent is set
+				}
+				else
+				{
+					tree_node * pParent = i_pNode->get_parent();
+					if (i_pNode->is_red() && pParent->is_red())
+					{
+//						std::cout << " node is red and parent is red" << std::endl;
+						tree_node * pGrand_Parent = pParent->get_parent();
+						tree_node * pUncle = pGrand_Parent->get_left(); // guess that uncle is left of grandparent
+						if (pParent == pGrand_Parent->get_left()) // if parent is left of grandparent, uncle is right of grandparent
+							pUncle = pGrand_Parent->get_right();
+						if (pUncle != nullptr && pUncle->is_red()) 
+						{ // parent is red and uncle is red: repaint the parent, uncle and grandparent
+//							std::cout << " repaint parent and uncle; rebalance from grandparent" << std::endl;
+							pParent->set_color_black();
+							pUncle->set_color_black();
+							pGrand_Parent->set_color_red();
+							// great-grandparent and grandparent may be both red: rerun process for the grandparent
+						}
+						else
+						{ // uncle is black or doesnt exist
+							if (pParent == pGrand_Parent->get_left())
+							{
+//								std::cout << " parent is left child of grandparent" << std::endl;
+								if (i_pNode == pParent->get_right())
+								{
+//									std::cout << " node is right child of parent; rotate parent left" << std::endl;
+									pParent->rotate_left();
+								}
+								tree_node * pGreat_Grand_Parent = pGrand_Parent->get_parent();
+//								std::cout << " rotate right at grand-parent" << std::endl;
+								tree_node * pRotation = pGrand_Parent->rotate_right();
+//								std::cout << " swap color of parent and grand-parent" << std::endl;
+								pRotation->swap_color(pGrand_Parent);
+								pGrand_Parent = pRotation;
+							}
+							else
+							{
+//								std::cout << " parent is right child of grandparent" << std::endl;
+								if (i_pNode == pParent->get_left())
+								{
+//									std::cout << " node is left child of parent; rotate parent right" << std::endl;
+									pParent->rotate_right();
+								}
+								tree_node * pGreat_Grand_Parent = pGrand_Parent->get_parent();
+//								std::cout << " rotate left at grand-parent" << std::endl;
+								tree_node * pRotation = pGrand_Parent->rotate_left();
+//								std::cout << " swap color of parent and grand-parent" << std::endl;
+								pRotation->swap_color(pGrand_Parent);
+								pGrand_Parent = pRotation;
+							}
+						}
+						nl_balance(pGrand_Parent);
+					}
+				}
+			}
+		}
+	
+		///
+		/// insert a potentially new key into the tree
+		///
+		virtual void nl_insert(T i_tKey, U i_tValue) noexcept(noexcept(T(std::declval<T>())))
+		{
+			if (m_pRoot != nullptr)
+			{
+				tree_node* pParent = m_pRoot;
+				tree_node* pCurr = m_pRoot;
+				while (pCurr != nullptr && pCurr->get_key() != i_tKey)
+				{
+					pParent = pCurr;
+					if (i_tKey < pCurr->get_key())
+						pCurr = pCurr->get_left();
+					else
+						pCurr = pCurr->get_right();
+				}
+//				std::cout << "find insertion point complete" << std::endl;
+				if (pCurr == nullptr)
+				{
+//					std::cout << "node is " << i_tKey << std::endl;
+//					std::cout << "parent is " << pParent->get_key() << std::endl;
+					tree_node* pNew = new tree_node(pParent,i_tKey,i_tValue);
+					if (i_tKey < pParent->get_key())
+						pParent->set_left(pNew);
+					else
+						pParent->set_right(pNew);
+					nl_balance(pNew);
+				}
+			}
+			else
+				m_pRoot = new tree_node(nullptr,i_tKey,i_tValue);
+		}
+		///
+		/// determine if a key exists within the tree; non-blocking
+		/// \returns true if the key exists within the tree; false otherwise
+		///
+		virtual bool nl_has_key(T i_tKey) const noexcept
+		{
+			return (nl_search(i_tKey) != nullptr);
+		}
+		
+		///
+		/// erase a node in the tree based on its key
+		///
+		virtual void nl_erase(T i_tKey) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			tree_node * pSearch_Result = nl_search(i_tKey);
+			if (pSearch_Result != nullptr) // make sure the key is in the tree
+			{
+				tree_node * pParent = pSearch_Result->get_parent();
+				// find the leftmost leaf or node of the right sub-tree
+				tree_node * pNew_Root = pSearch_Result->get_right();
+				if (pNew_Root != nullptr)
+				{
+					// traverse the left children of the new root
+					tree_node * pCurr = pNew_Root->get_left();
+					while (pCurr != nullptr)
+					{
+						pNew_Root = pCurr;
+						pCurr = pCurr->get_left();
+					}
+
+					pNew_Root->set_left(pSearch_Result->get_left());
+					if (pSearch_Result->get_left() != nullptr)
+						pNew_Root->get_left()->set_parent(pNew_Root);
+
+					tree_node * pRoot_Parent = pNew_Root->get_parent();
+
+					pRoot_Parent->set_left(pNew_Root->get_right());
+					if (pNew_Root->get_right() != nullptr)
+						pNew_Root->get_right()->set_parent(pRoot_Parent);
+					if (pNew_Root != pSearch_Result->get_right())
+					{
+						pNew_Root->set_right(pSearch_Result->get_right());
+					}
+			
+				}
+				else // no right children; use the left child as the new root
+				{
+					pNew_Root = pSearch_Result->get_left();
+				}
+
+				// place the new root and set its parent
+				if (pNew_Root != nullptr)
+					pNew_Root->set_parent(pParent);
+				if (pParent != nullptr)
+				{
+					if (i_tKey < pParent->get_key()) // replace the left child
+						pParent->set_left(pNew_Root);
+					else
+						pParent->set_right(pNew_Root);
+				}
+				else /// no parent and the key exists -- we are erasing the root of the tree
+					m_pRoot = pNew_Root;
+
+
+				class my_family
+				{
+				public:
+					tree_node * m_pMe;
+					tree_node * m_pParent;
+					tree_node * m_pSibling;
+					bool		m_bSibling_Is_Right;
+					tree_node * m_pLeft_Niece;
+					tree_node * m_pRight_Niece;
+
+					void initialize(tree_node * i_pMe, tree_node * i_pParent) noexcept
+					{
+						m_pMe = i_pMe;
+						m_pSibling = nullptr;
+						m_pLeft_Niece = nullptr;
+						m_pRight_Niece = nullptr;
+						m_pParent = i_pParent;
+						m_bSibling_Is_Right = false;
+						if (m_pParent != nullptr)
+						{
+							if (m_pMe != nullptr)
+							{
+								if (m_pMe->get_key() < m_pParent->get_key())
+								{
+									m_pSibling = m_pParent->get_right();
+									m_bSibling_Is_Right = true;
+								}
+								else
+									m_pSibling = m_pParent->get_left();
+							}
+							else
+							{
+								m_pSibling = m_pParent->get_left();
+								if (m_pSibling == nullptr)
+								{
+									m_pSibling = m_pParent->get_right();
+									m_bSibling_Is_Right = true;
+								}
+							}
+						}
+						if	(m_pSibling != nullptr)
+						{
+							m_pLeft_Niece = m_pSibling->get_left();	
+							m_pRight_Niece = m_pSibling->get_right();	
+						}
+					}
+						
+					void traverse_up(void) noexcept
+					{
+						if (m_pParent != nullptr)
+							initialize(m_pParent,m_pParent->get_parent());
+					}
+
+					my_family(tree_node * i_pMe, tree_node * i_pParent) noexcept
+					{
+						initialize(i_pMe,i_pParent);
+					}
+
+
+				};
+
+
+
+				if (pNew_Root != nullptr && pParent == nullptr) // new root will be the tree root
+				{
+					pNew_Root->set_color_black(); // simply repaint the new root
+				}
+				else if (pNew_Root != nullptr && (pSearch_Result->is_red() || pNew_Root->is_red()))
+				{
+					pNew_Root->set_color_black(); // simply repaint the new root
+				}
+				else // new root is not tree root; is black, and the deleted node was black
+				{
+					my_family cMy_Family(pNew_Root,pParent);
+					bool bDouble_Black = true;
+					while (bDouble_Black)
+					{
+						if (cMy_Family.m_pSibling == nullptr || 
+							(cMy_Family.m_pSibling->is_black() && (cMy_Family.m_pLeft_Niece == nullptr || cMy_Family.m_pLeft_Niece->is_black()) && (cMy_Family.m_pRight_Niece == nullptr || cMy_Family.m_pRight_Niece->is_black())))
+						{ // sibling and both its children are black
+							if (cMy_Family.m_pSibling != nullptr)
+								cMy_Family.m_pSibling->set_color_red();
+							if (cMy_Family.m_pParent->is_red())
+							{
+								cMy_Family.m_pParent->set_color_black();
+								bDouble_Black = false;
+							}
+							else
+								cMy_Family.traverse_up(); // color the parent of the new node double black
+						}
+						else if (cMy_Family.m_pSibling->is_black())  // sibling is black and at least one child is red
+						{
+							if	((cMy_Family.m_bSibling_Is_Right && cMy_Family.m_pRight_Niece != nullptr && cMy_Family.m_pRight_Niece->is_red()) ||  //sibling is right and right niece or both nieces are red
+								(!cMy_Family.m_bSibling_Is_Right && cMy_Family.m_pLeft_Niece != nullptr && cMy_Family.m_pLeft_Niece->is_red())) // sibling is left and left niece or both nieces are red
+							{
+								if (cMy_Family.m_bSibling_Is_Right)
+								{
+									cMy_Family.m_pSibling->rotate_left();
+									cMy_Family.m_pRight_Niece->set_color_black();
+								}
+								else
+								{
+									cMy_Family.m_pSibling->rotate_right();
+									cMy_Family.m_pLeft_Niece->set_color_black();
+								}
+							}
+							else if (cMy_Family.m_bSibling_Is_Right) // sibling is right and left niece is red
+							{
+								cMy_Family.m_pLeft_Niece->set_color_black();
+								cMy_Family.m_pSibling->rotate_right();
+								pNew_Root = cMy_Family.m_pParent->rotate_left(); // TODO: need to check for root change here
+								if (pNew_Root->get_parent() == nullptr)
+									m_pRoot = pNew_Root;
+							}
+							else // sibling is left and right niece is red
+							{
+								cMy_Family.m_pRight_Niece->set_color_black();
+								cMy_Family.m_pSibling->rotate_left();
+								pNew_Root = cMy_Family.m_pParent->rotate_right();
+								if (pNew_Root->get_parent() == nullptr)
+									m_pRoot = pNew_Root;
+							}
+							bDouble_Black = false;
+						}
+						else // sibling is red
+						{
+							if (cMy_Family.m_bSibling_Is_Right)
+								pNew_Root = cMy_Family.m_pParent->rotate_left();
+							else
+								pNew_Root = cMy_Family.m_pParent->rotate_right();
+								
+							if (pNew_Root->get_parent() == nullptr)
+								m_pRoot = pNew_Root;
+							cMy_Family.m_pParent->set_color_red();
+							cMy_Family.m_pSibling->set_color_black();
+							cMy_Family.initialize(cMy_Family.m_pMe,cMy_Family.m_pParent); // perform loop again with revised tree
+
+						}
+					} // while double black
+				}
+
+
+
+
+				// need to change parents after the above operations because the act of setting the parent can change the color of the new root
+
+
+				// delete the erased node
+				pSearch_Result->set_left(nullptr);
+				pSearch_Result->set_right(nullptr);
+
+				delete pSearch_Result;
+				//nl_balance(pNew_Root);
+
+			}
+		}
+		///
+		/// clear the tree; non-blocking
+		///
+		virtual void nl_clear(void) noexcept(noexcept(std::declval<T>().~T()))
+		{
+			delete m_pRoot;
+			m_pRoot = nullptr;
+		}
+
+		///
+		/// determine if the tree is empty
+		///
+		virtual bool nl_empty(void) const noexcept
+		{
+			return m_pRoot == nullptr;
+		}
+
+		///
+		/// (re) store information in the tree, or insert if the key doesn't exist
+		///
+		virtual void nl_store(T i_tKey, U i_tValue) noexcept
+		{
+			tree_node * pSearch_Result = nl_search(i_tKey);
+			if (pSearch_Result != nullptr) // make sure the key is in the tree
+				pSearch_Result->set_value(i_tValue);
+			else
+				nl_insert(i_tKey,i_tValue);
+		}			
+		///
+		/// retrieve the specified key
+		/// \returns the specified key, or T() if not found
+		///
+		virtual U nl_at(T i_tKey) const noexcept
+		{
+			U tRet;
+			tree_node * pSearch_Result = nl_search(i_tKey);
+			if (pSearch_Result != nullptr) // make sure the key is in the tree
+				tRet = pSearch_Result->get_value();
+			return tRet;
+		}			
+
+	public:
+		///
+		/// insert a new value into the key
+		///
+		virtual void insert(T i_tKey, U i_tValue) noexcept(noexcept(T(std::declval<T>())) && noexcept(U(std::declval<U>())))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_insert(i_tKey,i_tValue);
+		}
+		///
+		/// erases a given key from the tree
+		///
+		virtual void erase(T i_tKey) noexcept(noexcept(std::declval<T>().~T()) && noexcept(std::declval<U>().~U()))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_erase(i_tKey);
+		}
+		///
+		/// deletes all nodes in the tree
+		///
+		virtual void clear(void) noexcept(noexcept(std::declval<T>().~T()) && noexcept(std::declval<U>().~U()))
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_clear();
+		}
+		///
+		/// determine if a given key is in the tree
+		/// \returns true if the key is in the tree; false otherwise
+		///
+		virtual bool has_key(T i_tKey) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_has_key(i_tKey);
+		}
+		
+		///
+		/// determine if the tree is empty
+		/// \returns true if the tree is empty; false otherwise
+		///
+		virtual bool empty(void) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_empty();
+		}
+		///
+		/// (re) store information in the tree, or insert if the key doesn't exist
+		///
+		virtual void store(T i_tKey, U i_tValue) noexcept
+		{
+			write_lock_guard cLock(m_mMutex);
+			nl_store(i_tKey,i_tValue);
+		}
+		///
+		/// retrieve value associated with a given key
+		///
+		virtual U at(T i_tKey) const noexcept
+		{
+			read_lock_guard cLock(m_mMutex);
+			return nl_at(i_tKey);
+		}
+
+			
+		///
+		/// base class for tree iterators
+		///
+		class iterator_base
+		{
+		private:
+			bool m_bLock_Type_Write; ///< type of lock to hold on the tree; true indicates a write lock, false indicates a read lock
+		protected:
+			const safe_map<T,U> * m_pTree; ///< the tree that is being iterated over
+			tree_node * m_pCursor; ///< a cursor pointing to the current data location within the tree
+		public:
+			///
+			/// void constructor (deleted)
+			///
+			iterator_base(void) = delete;
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree
+			///
+			iterator_base(
+				const safe_map<T,U> & i_cTree, ///< the tree to iterate over
+				maps::start_point i_eStart_Point, ///< the starting point to use within the tree (beginning or end)
+				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
+				)  noexcept: m_pTree(&i_cTree)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_lock();
+				else
+					m_pTree->m_mMutex.read_lock();
+				set_position(i_eStart_Point);
+			}
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree
+			///
+			iterator_base(
+				const safe_map<T,U> &i_cTree, ///< the tree to iterate over
+				tree_node * i_pCursor, ///< the starting point to use within the tree
+				bool i_bLock_Type_Write ///< flag to indicate lock type; true indicates write lock, false indicates read lock
+				)  noexcept: m_pTree(&i_cTree)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				m_pTree = &i_cTree;
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_lock();
+				else
+					m_pTree->m_mMutex.read_lock();
+				m_pCursor = i_pCursor;
+			}
+			///
+			/// copy constructor (deleted)
+			///
+			iterator_base( const iterator_base & i_cRHO) = delete;
+
+			///
+			/// destructor: releases lock
+			///
+			virtual ~iterator_base(void)
+			{
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_unlock();
+				else
+					m_pTree->m_mMutex.read_unlock();
+			}
+			///
+			/// assign operator (deleted)
+			///
+			iterator_base & operator =( const iterator_base & i_cRHO) = delete;
+
+			///
+			/// set the position of the iterator to a selected point (beginning, end, or root of the tree)
+			///
+			virtual void set_position(maps::start_point i_eStart_Point) noexcept
+			{
+				// set cursor
+				m_pCursor = m_pTree->m_pRoot;
+				switch (i_eStart_Point)
+				{
+				case maps::start_point::end:
+					{
+						tree_node * pCurr = m_pTree->m_pRoot;
+						while (pCurr != nullptr)
+						{
+							m_pCursor = pCurr;
+							pCurr = pCurr->get_right();
+						}
+					}
+					break;
+				case maps::start_point::beginning:
+				default:
+					{
+						tree_node * pCurr = m_pTree->m_pRoot;
+						while (pCurr != nullptr)
+						{
+							m_pCursor = pCurr;
+							pCurr = pCurr->get_left();
+						}
+					}
+					break;
+				}
+			}
+			///
+			/// pre-increment operator; advances the iterator within the tree; will not advance past the end of the tree
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator ++ (void) noexcept
+			{
+				if (m_pCursor != nullptr)
+				{
+					if (m_pCursor->get_right() != nullptr)
+					{
+						m_pCursor = m_pCursor->get_right();
+						tree_node * pLeft = m_pCursor->get_left();
+						while (pLeft != nullptr)
+						{
+							m_pCursor = pLeft;
+							pLeft = m_pCursor->get_left();
+						}
+					}
+					else
+					{
+						tree_node * pChild = m_pCursor;
+						tree_node * pParent = m_pCursor->get_parent();
+						while (pParent != nullptr && pParent->get_right() == pChild)
+						{
+							pChild = pParent;
+							pParent = pParent->get_parent();
+						}
+						m_pCursor = pParent;
+					}
+				}
+				return *this;
+			}
+			///
+			/// pre-decrement operator; rewinds the iterator within the tree; will not rewind past the start of the tree
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator -- (void) noexcept
+			{
+				if (m_pCursor != nullptr)
+				{
+					if (m_pCursor->get_left() != nullptr)
+					{
+						m_pCursor = m_pCursor->get_left();
+						tree_node * pRight = m_pCursor->get_right();
+						while (pRight != nullptr)
+						{
+							m_pCursor = pRight;
+							pRight = m_pCursor->get_right();
+						}
+					}
+					else
+					{
+						tree_node * pChild = m_pCursor;
+						tree_node * pParent = m_pCursor->get_parent();
+						while (pParent != nullptr && pParent->get_left() == pChild)
+						{
+							pChild = pParent;
+							pParent = pParent->get_parent();
+						}
+						m_pCursor = pParent;
+					}
+				}
+				return *this;
+			}
+			///
+			/// add-assign operator; advances the iterator within the tree; will not advance past the end of the tree or prior to the start of the data
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator += (int i_nValue) noexcept
+			{
+				size_t nCount = std::abs(i_nValue);
+				for (size_t nI = 0; m_pCursor != nullptr && nI < nCount; nI++)
+				{
+					if (i_nValue < 0)
+						--(*this);
+					else
+						++(*this);
+				}
+				return *this;
+			}
+			///
+			/// subtract-assign operator; advances the iterator within the tree; will not advance past the end of the tree or prior to the start of the data
+			/// \returns a reference to this iterator
+			///
+			virtual iterator_base & operator -= (int i_nValue) noexcept
+			{
+				size_t nCount = std::abs(i_nValue);
+				for (size_t nI = 0; m_pCursor != nullptr && nI < nCount; nI++)
+				{
+					if (i_nValue < 0)
+						++(*this);
+					else
+						--(*this);
+				}
+				return *this;
+			}
+			///
+			/// equality operator
+			/// \returns true if both iterators are pointing to the same tree and are pointing to the same location within the tree
+			///
+			virtual bool operator ==(const iterator_base & i_cRHO) noexcept
+			{
+				return (m_pTree == i_cRHO.m_pTree && m_pCursor == i_cRHO.m_pCursor);
+			}
+			///
+			/// inequality operator
+			/// \returns true if the iterators are not pointing to the same tree or are not pointing to the same location within one tree
+			///
+			virtual bool operator !=(const iterator_base & i_cRHO) noexcept
+			{
+				return (m_pTree != i_cRHO.m_pTree || m_pCursor != i_cRHO.m_pCursor);
+			}
+			///
+			/// retrive the value at the current location of the iterator; if the iterator is not pointing to valid data will return type T with default contructor
+			/// \returns the data at the current location of the iterator if the iterator is valid
+			///
+			virtual T get_key(void) noexcept(noexcept(T()))
+			{
+				T tRet = T();
+				if (m_pCursor != nullptr)
+					tRet = m_pCursor->get_key();
+				return tRet;
+			}
+			///
+			/// retrive the value at the current location of the iterator; if the iterator is not pointing to valid data will return type T with default contructor
+			/// \returns the data at the current location of the iterator if the iterator is valid
+			///
+			virtual U get_value(void) noexcept(noexcept(U()))
+			{
+				U tRet = U();
+				if (m_pCursor != nullptr)
+					tRet = m_pCursor->get_value();
+				return tRet;
+			}
+			///
+			/// determine if the iterator is pointing to a valid place within the tree
+			/// \returns true if the iterator is valid; false otherwise
+			///
+			virtual bool is_valid(void) noexcept
+			{
+				return m_pCursor != nullptr;
+			}
+		};
+
+		///
+		/// class for iterating through a tree; unlike typical iterators this class is scoped and holds a read lock on the tree to ensure that the tree does not change data or size during iteration
+		///
+		class read_iterator : public iterator_base
+		{
+		public:
+			///
+			/// default constructor (deleted)
+			///
+			read_iterator(void) = delete;
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree; blocking (read)
+			///
+			read_iterator(
+				const safe_map<T,U> & i_cTree, ///< the tree to iterate over
+				enum maps::start_point i_eStart_Point ///< the starting point to use within the tree (beginning or end)
+				)  noexcept : iterator_base(i_cTree,i_eStart_Point,false)
+			{
+			}
+			///
+			/// copy constructor; aquires an additional read lock on the tree; blocking (read)
+			///
+			read_iterator(
+				const read_iterator & i_cIterator ///< the iterator to copy
+				)  noexcept : iterator_base(*i_cIterator.m_pTree,maps::start_point::beginning,false)
+			{
+				iterator_base::m_pCursor = i_cIterator.m_pCursor;
+			}
+			///
+			/// assignment operator; releases lock on existing tree and aquires a read lock on the tree that the right hand iterator refers to; blocking (read)
+			///
+			read_iterator & operator = (
+					const read_iterator & i_cIterator ///< the iterator to copy
+				) noexcept
+			{
+				iterator_base::m_pTree->m_mMutex.read_unlock();
+				iterator_base::m_pTree = i_cIterator.m_pTree;
+				iterator_base::m_pTree->m_mMutex.read_lock();
+				iterator_base::m_pCursor = i_cIterator.m_pCursor;
+				return *this;
+			}
+
+			///
+			/// post-increment operator; advances the iterator within the tree; will not advance past the end of the tree
+			/// \returns a reference to this iterator
+			///
+			read_iterator operator ++ (int i_nValue) noexcept
+			{
+				read_iterator cRet(*this);
+				iterator_base::operator++();
+				return cRet;
+			}
+			///
+			/// post-decrement operator; rewinds the iterator within the tree; will not rewind past the start of the tree
+			/// \returns a reference to this iterator
+			///
+			read_iterator operator -- (int i_nValue) noexcept
+			{
+				read_iterator cRet(*this);
+				iterator_base::operator--();
+				return cRet;
+			}
+		};
+		///
+		/// class for iterating through a tree; unlike typical iterators this class is scoped and holds a write lock on the tree to ensure that the tree does not change data or size during iteration
+		///
+		class write_iterator : public iterator_base
+		{
+		public:
+			///
+			/// default constructor (deleted)
+			///
+			write_iterator(void) = delete;
+			///
+			/// constructor that initializes the iterator and aquires a read lock on the tree; blocking (write)
+			///
+			write_iterator(
+				const safe_map<T,U> & i_cTree, ///< the tree to iterate over
+				enum maps::start_point i_eStart_Point ///< the starting point to use within the tree (beginning or end)
+				)  noexcept : iterator_base(i_cTree,i_eStart_Point,true)
+			{
+			}
+			///
+			/// copy constructor (deleted)
+			///
+			write_iterator(
+				const write_iterator & i_cIterator ///< the iterator to copy
+				)  = delete;
+			///
+			/// assignment operator (deleted)
+			///
+			write_iterator & operator = (
+					const write_iterator & i_cIterator ///< the iterator to copy
+				) = delete;
+
+			///
+			/// store a key at the current position; if the key matches the current key (via the == operator) the key is updated; otherwise it is ignored
+			///
+			void set_value(U i_tValue) noexcept
+			{
+				iterator_base::m_pCursor->set_value(i_tValue);
+			}
+		};
+
+		class control_base
+		{
+		private:
+			bool m_bLock_Type_Write; // type of lock to hold on the tree; true indicates a write lock, false indicates a read lock
+		protected:
+			safe_map<T,U> * m_pTree; ///< reference to the tree to control
+		public:
+			///
+			/// default contructor (deleted)
+			///
+			control_base(void) = delete;
+			///
+			/// contructor: tie the read control to a particular tree and lock the tree for read; blocking
+			///
+			control_base(
+				safe_map<T,U> & i_cTree, ///< the tree to be accessed
+				bool i_bLock_Type_Write ///< flag to indicate the type of lock control to assume
+				)  noexcept: m_pTree(&i_cTree)
+			{
+				m_bLock_Type_Write = i_bLock_Type_Write;
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_lock();
+				else
+					m_pTree->m_mMutex.read_lock();
+
+			}
+			///
+			/// copy contructor (deleted)
+			///
+			control_base(const control_base & i_cIterator)   = delete;
+			///
+			/// destructor: release read lock 
+			///
+			~control_base(void) noexcept
+			{
+				if (m_bLock_Type_Write)
+					m_pTree->m_mMutex.write_unlock();
+				else
+					m_pTree->m_mMutex.read_unlock();
+			}
+			///
+			/// assignment / copy operator (deleted)
+			///
+			control_base & operator = (const control_base & i_cIterator) = delete;
+			///
+			/// assignement operator; releases read access to existing tree and aquires read access to a different tree; blocking(Read)
+			///
+			control_base & operator =(const safe_map<T,U> & i_cTree) noexcept
+			{
+				if (&i_cTree != m_pTree) // don't do anything if being set to the tree that is already under control)
+				{
+					if (m_bLock_Type_Write)
+					{
+						i_cTree.m_mMutex.write_lock();
+						m_pTree->m_mMutex.write_unlock();
+					}
+					else
+					{
+						i_cTree.m_mMutex.read_lock();
+						m_pTree->m_mMutex.read_unlock();
+					}
+					control_base::m_pTree = &i_cTree;
+				}
+				return *this;
+			}
+			///
+			/// test if the tree is empty
+			/// \returns true if the tree is empty; false otherwise
+			///
+			bool empty(void) const noexcept
+			{
+				return m_pTree->nl_empty();
+			}
+			///
+			/// test if a value exists within the tree
+			/// \returns true if the key is within the tree; false otherwise
+			///
+			bool has_key(T i_tT) const  noexcept
+			{
+				return m_pTree->nl_has_key(i_tT);
+			}
+			///
+			/// retrieve a value from the tree
+			///
+			U at(T i_tT) const  noexcept
+			{
+				return m_pTree->nl_at(i_tT);
+			}
+
+		};
+
+		///
+		/// the write control class is designed to allow scoped write access to the tree that maintains a write lock throughout the scope. This is useful when many writes occur
+		///
+		class read_control : public control_base
+		{
+		public:
+			///
+			/// void constructor; deleted
+			///
+			read_control(void) = delete;
+			///
+			/// contructor: tie the read control to a particular tree and lock the tree for read; blocking
+			///
+			read_control(
+				safe_map<T,U> & i_cTree ///< the tree to be accessed
+				)  noexcept: control_base(i_cTree,false)
+			{
+				;
+			}
+
+			///
+			/// copy contructor; creates a new read_control on a tree that an existing read control is accessing; blocking(read)
+			///
+			read_control(const read_control & i_cController) noexcept : control_base(*i_cController.m_pTree,false)
+			{
+				;
+			}
+			///
+			/// assignement operator; releases read access to existing tree and aquires read access to tree referred to by other controller; blocking(Read)
+			///
+			read_control & operator =(const read_control & i_cController) noexcept
+			{
+				i_cController.m_pTree->m_mMutex.read_lock();
+				control_base::m_pTree->m_mMutex.read_unlock();
+				control_base::m_pTree = i_cController.m_pTree;
+				return *this;
+			}
+		};
+
+
+		///
+		/// the write control class is designed to allow scoped write access to the tree that maintains a write lock throughout the scope. This is useful when many writes occur
+		///
+		class write_control : public control_base
+		{
+		public:
+			///
+			/// default contructor (deleted)
+			///
+			write_control(void) = delete;
+			///
+			/// contructor: tie the read control to a particular tree and lock the tree for read; blocking
+			///
+			write_control(
+				safe_map<T,U> & i_cTree ///< the tree to be accessed
+				)  noexcept: control_base(i_cTree,true)
+			{
+			}
+			///
+			/// copy contructor (deleted)
+			///
+			write_control(const write_control & i_cIterator)   = delete;
+			///
+			/// assignment / copy operator (deleted)
+			///
+			write_control & operator = (const write_control & i_cIterator) = delete;
+			///
+			/// store the value at the current location of the iterator; if the iterator is not pointing to valid data the request will be ignored
+			///
+			void insert(
+				const T& i_tT, ///< the data to be stored
+				const U& i_tU ///< the data to be stored
+				) noexcept
+			{
+				control_base::m_pTree->nl_insert(i_tT,i_tU);
+			}
+			///
+			/// erase a value from the tree
+			///
+			void erase(
+				const T& i_tT ///< the data to be stored
+				) noexcept
+			{
+				control_base::m_pTree->nl_erase(i_tT);
+			}
+			///
+			/// clear the tree; 
+			///
+			void clear(void)
+			{
+				control_base::m_pTree->nl_clear();
+			}
+			///
+			/// (re) store a value in the tree; insert's value if the key doesn't exist, otherwise updates the current value
+			///
+			void store(T i_tKey, U i_tValue)
+			{
+				control_base::m_pTree->nl_store(i_tKey,i_tValue);
+			}
+
+		};	
+	};
+
+}
+#endif //#ifndef __XSTDTSL_SAFE_MAP_H

@@ -16,6 +16,17 @@ namespace xstdtsl
 				};
 	}
 
+	namespace maps
+	{
+		/// 
+		/// enumeration to describe whether the iteration begins at the beginning or end of the tree
+		///
+		enum class start_point {
+				beginning, ///< iteration will begin at the start of the map
+				end ///< iteration will begin at the end of the map
+				};
+	}
+
 	namespace lists
 	{
 		/// 

@@ -35,6 +35,7 @@ xstdtsl_vector_test_exe
 xstdtsl_binary_tree_test_exe
 xstdtsl_avl_tree_test_exe
 xstdtsl_rb_tree_test_exe
+xstdtsl_map_test_exe
 
 #Visual Studio
 *.suo
